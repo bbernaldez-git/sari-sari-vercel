@@ -1,0 +1,87 @@
+ID,Name,Category,Price,Stock,Tags,Image
+P1000,Lucky Me Pancit Canton Sweet/Spicy,Noodles,18,39,"pancit canton,noodles,canton,pancit,instant,lucky me,sweet and spicy",
+P1001,Kopiko Brown 3-in-1,Coffee,8,57,"coffee,kopiko,3in1,sachet,brown",
+P1002,Coke Sakto 237ml,Drinks,15,27,"coke,softdrinks,soda,cola",
+P1003,Safeguard Soap,Hygiene,38,14,"soap,safeguard,sabon,bath",
+P1004,Eggs (each),Fresh,11,45,"eggs,itlog,fresh,ulam",
+P1005,Rice (1 kg),Staples,58,25,"rice,bigas,kanin,1kg",
+P1006,Piattos 40g,Snacks,18,24,"chips,piattos,cheese,potato,chichirya",
+P1007,Argentina Corned Beef 150g,Canned,39,9,"argentina,corned,beef",https://res.cloudinary.com/di1fg6nu/image/upload/v1794272452/fib5d80gedagwkb1a5vz.png
+P1794046832744,Lucky Me Pancit Canton Chilimansi,Noodles,18,39,"pancit canton,chilimansi,noodles,spicy,canton",
+P1794046832745,Lucky Me Beef Na Beef,Noodles,13,40,"noodles,beef,mami,instant,lucky me",
+P1794046832746,Payless Mami Chicken,Noodles,12,40,"noodles,mami,chicken,instant,payless",
+P1794046832747,Nissin Cup Noodles Seafood,Noodles,35,20,"cup noodles,noodles,seafood,nissin,instant",
+P1794046832748,Nescafe Original 3-in-1,Coffee & Tea,8,60,"coffee,nescafe,3in1,sachet,kape,coffee stick",
+P1794046832749,Great Taste White,Coffee & Tea,7,60,"coffee,great taste,white,sachet",
+P1794046832750,Milo Sachet 24g,Powdered drinks,12,40,"milo,chocolate,choco drink,sachet",https://res.cloudinary.com/di1fg6nu/image/upload/v1794273243/wwj5i6khyb2ixlwqiqdx.png
+P1794046832751,Lipton Iced Tea Sachet,Coffee & Tea,8,40,"tea,iced tea,lipton,lemon,sachet",
+P1794046832752,Sprite Sakto 237ml,Drinks,15,30,"sprite,softdrinks,soda,lemon",
+P1794046832753,Royal Tru-Orange 237ml,Drinks,15,30,"royal,orange,soda,softdrinks",
+P1794046832754,C2 Green Tea Apple 230ml,Drinks,20,24,"c2,green tea,iced tea,apple",
+P1794046832755,Bottled Water 500ml,Drinks,15,48,"water,mineral,drinking water,tubig",
+P1794046832756,Tang Orange Sachet,Drinks,8,50,"tang,orange,juice,powder,sachet",
+P1794046832757,Zesto Juice Drink 200ml,Drinks,10,40,"zesto,juice,orange,apple",
+P1794046832758,Cobra Energy Drink 240ml,Drinks,18,24,"energy drink,cobra,inumin",
+P1794046832759,Nova Multigrain 40g,Snacks,18,24,"chips,nova,cheddar,chichirya",
+P1794046832760,Chippy BBQ 27g,Snacks,10,40,"chips,chippy,corn,bbq,chichirya",
+P1794046832761,Oishi Prawn Crackers,Snacks,10,30,"prawn,crackers,oishi,chichirya",
+P1794046832762,Boy Bawang Garlic 100g,Snacks,18,30,"boy bawang,corn,garlic,cornick,chichirya",
+P1794046832763,Skyflakes Single Pack,Biscuits and Crackers,8,10,"crackers,skyflakes,biscuit,meryenda",https://res.cloudinary.com/di1fg6nu/image/upload/v1794271287/oxyeqdpo3rkcppbx1md1.png
+P1794046832764,Fita Biscuit,Snacks,8,36,"crackers,fita,biscuit,meryenda",
+P1794046832765,Hany 16g,Candy & Sweets,4,100,"chocnut,peanut,chocolate,candy,annies,milk chocolate",
+P1794046832766,Cloud 9 Chocolate Bar classic,Candy & Sweets,12,15,"chocolate,cloud 9,peanut,candy",https://res.cloudinary.com/di1fg6nu/image/upload/v1794272020/dx4fmjkamipcrwz0ojl8.png
+P1794046832767,Maxx honey lemon,Candy & Sweets,2,200,"candy,maxx,lozenge,ubo,honey,lemon",https://res.cloudinary.com/di1fg6nu/image/upload/v1794272315/ypjkvb56ybvqhuu5jyzv.png
+P1794046832768,Pastillas Candy,Candy & Sweets,1,200,"pastillas,candy,milk,sweets",
+P1794046832769,Argentina Corned Beef 175g,Canned Goods,42,18,"corned beef,argentina,canned,ulam",https://res.cloudinary.com/di1fg6nu/image/upload/v1794272547/trkxejznoqg2ea8spk8p.png
+P1794046832770,Ligo Sardines Tomato 155g,Canned Goods,29,15,"sardines,ligo,tomato,canned,ulam,delata,sardinas",https://res.cloudinary.com/di1fg6nu/image/upload/v1794274449/kp74kf1fxi5iafe3llpk.png
+P1794046832771,Mega Sardines Green 155g,Canned Goods,20,40,"sardines,mega,green,canned,ulam",
+P1794046832772,Century Tuna Flakes in oil 180g,Canned Goods,52,10,"tuna,century,flakes,canned,ulam,delata",https://res.cloudinary.com/di1fg6nu/image/upload/v1794273773/qnhbswi9f3nalya43jhh.png
+P1794046832773,Libby's Vienna Sausage 130g,Canned Goods,30,20,"vienna sausage,libbys,canned,ulam",
+P1794046832774,Brown Sugar (1 kg),Staples,85,19,"sugar,asukal,brown",
+P1794046832775,Iodized Salt 500g,Staples,20,30,"salt,asin,iodized",
+P1794046832776,Onion Red (per pc),Fresh,8,40,"onion,sibuyas,red,gulay",
+P1794046832777,Garlic (per head),Fresh,5,50,"garlic,bawang,gulay",
+P1794046832778,Tomato (per pc),Fresh,6,40,"tomato,kamatis,gulay",
+P1794046832779,Ice Pack,Fresh,10,30,"ice,yelo,cold",
+P1794046832780,Alaska Evaporada 154ml,Dairy,28,22,"milk,evaporada,alaska,evap",
+P1794046832781,Alaska Condensada 168g,Dairy,35,17,"milk,condensada,alaska,condensed",
+P1794046832782,Birch Tree Milk Sachet,Dairy,8,39,"milk,birch tree,powdered,sachet",
+P1794046832783,Gardenia Classic White Loaf,Bread & Spreads,70,10,"bread,gardenia,tinapay,sandwich",
+P1794046832785,Star Margarine twin pack,Bread & Spreads,10,10,"margarine,star,butter,palaman",https://res.cloudinary.com/di1fg6nu/image/upload/v1794271652/uklgwr931vz1bjr2nu1h.png
+P1794046832786,Cheez Whiz twin pack,Bread & Spreads,15,10,"cheese,cheez whiz,palaman,spread,chiz",https://res.cloudinary.com/di1fg6nu/image/upload/v1794271558/ji1fvaztu68twglc5362.png
+P1794046832787,Silver Swan Soy Sauce 200ml,Condiments & Sauces,18,35,"toyo,soy sauce,silver swan,sawsawan",
+P1794046832788,Datu Puti Vinegar 200ml,Condiments & Sauces,14,36,"suka,vinegar,datu puti,sawsawan",
+P1794046832789,UFC Banana Catsup 320g,Condiments & Sauces,32,24,"catsup,ketchup,ufc,banana",
+P1794046832790,Lady's Choice Mayonnaise 80ml,Condiments & Sauces,32,20,"mayonnaise,mayo,ladys choice",
+P1794046832791,Mang Tomas Sarsa 100g,Condiments & Sauces,25,23,"lechon sauce,mang tomas,sarsa",
+P1794046832792,Knorr Sinigang Mix,Cooking Essentials,10,50,"sinigang,sampalok,mix,sabaw",
+P1794046832793,Maggi Magic Sarap 8g,Cooking Essentials,5,80,"magic sarap,seasoning,maggi,sachet",
+P1794046832794,Ajinomoto Sachet,Cooking Essentials,5,78,"ajinomoto,vetsin,msg,seasoning",
+P1794046832795,Cooking Oil (1/4 L),Cooking Essentials,25,20,"cooking oil,mantika,minola",
+P1794046832796,Palmolive Shampoo Sachet,Hygiene,7,60,"shampoo,palmolive,sachet",
+P1794046832797,Colgate Toothpaste 25g,Hygiene,18,30,"toothpaste,colgate,ngipin",
+P1794046832798,Toothbrush,Hygiene,20,30,"toothbrush,sepilyo,ngipin",
+P1794046832799,Sanitary Napkin (8s),Hygiene,35,20,"napkin,pad,modess,regla",
+P1794046832800,Tide Powder Sachet,Household,8,60,"detergent,tide,laba,powder,sachet",
+P1794046832801,Downy Fabric Conditioner Sachet,Household,8,60,"downy,fabric conditioner,softener,laba",
+P1794046832802,Joy Dishwashing Liquid Sachet,Household,8,50,"joy,dishwashing,hugas pinggan,sabon",
+P1794046832803,Zonrox Bleach 250ml,Household,25,20,"zonrox,bleach,labada,linis",
+P1794046832804,Lighter,Household,20,30,"lighter,posporo,apoy",
+P1794046832805,Mosquito Coil (Katol),Household,15,30,"katol,mosquito,coil,lamok",
+P1794046832806,Tissue Roll,Household,12,40,"tissue,toilet paper,banyo",
+P1794051620059,Zesto Choc-O,Drinks,23,15,"zesto,choc,chocolate",
+P1794051691856,Zesto Mango,Drinks,14,40,"zesto,mango,mangga,big 250",
+P1794051730090,Beng Beng,Candy & Sweets,10,0,"beng,chocolate bar,beng beng",https://res.cloudinary.com/di1fg6nu/image/upload/v1794271729/zprebbfp0kd9eootmd2a.png
+P1794052121342,Lucky Me Pancit Canton Extra Hot,Noodles,18,30,"lucky,pancit,canton,extra,hot",
+P1794054169618,Wafertime,Biscuits and Crackers,10,20,"wafertime,wafer,rich cream,crackers",https://res.cloudinary.com/di1fg6nu/image/upload/v1794271479/qhzlk2eptrftjcl5cjkg.png
+P1794054216815,Hansel Crackers,Biscuits and Crackers,9,20,"hansel,crackers",https://res.cloudinary.com/di1fg6nu/image/upload/v1794215474/kxq4kh17kwd5duladvpl.png
+P1794054360117,Combi,Biscuits and Crackers,8,10,"combi,wafer,chocolate wafer,choco cream",https://res.cloudinary.com/di1fg6nu/image/upload/v1794215389/qrijxdraixo2aqf4r9yq.png
+P1794054544998,Richeese 48g,Biscuits and Crackers,15,30,"wafer,creamy cheese,cheese",https://res.cloudinary.com/di1fg6nu/image/upload/v1794225479/lzosdqanv7na6ejaalz6.png
+P1794054593544,Richoco 48g,Biscuits and Crackers,15,20,"richoco,48g,chocolate",https://res.cloudinary.com/di1fg6nu/image/upload/v1794252272/srklvaxnwahsl6fzjktb.png
+P1794054681924,Calcheese 48g,Biscuits and Crackers,15,20,"calcheese,cheese,wafer,cheese wafer",https://res.cloudinary.com/di1fg6nu/image/upload/v1794225418/yligdezcrfmp1kkap9ki.png
+P1794212405743,Sky Flakes,Biscuits and Crackers,9,10,"sky,flakes,biscuit,crackers",https://res.cloudinary.com/di1fg6nu/image/upload/v1794252457/nfsfer6oegpnz1stc3qy.png
+P1794273413877,Nestea Lemon,Powdered drinks,25,15,"nestea,lemon,set",https://res.cloudinary.com/di1fg6nu/image/upload/v1794273398/xdnoaqfat9iizkhhcpeo.png
+P1794273560530,Nestea apple,Powdered drinks,25,15,"nestea,apple,set",https://res.cloudinary.com/di1fg6nu/image/upload/v1794273514/wij1se1viupgdsky61mp.png
+P1794273628293,Nestea Lemon Cucumber,Powdered drinks,25,10,"nestea,lemon,cucumber",https://res.cloudinary.com/di1fg6nu/image/upload/v1794273611/oxtohajc7rlvsdmohg2y.png
+P1794274050517,Century Tuna Flakes in oil 155g,Canned Goods,42,10,"century,tuna,flakes,155g,ulam,delata",https://res.cloudinary.com/di1fg6nu/image/upload/v1794273933/jg6ia2koruokxdazwcev.png
+P1794274221640,Century Tuna Flakes in oil 95g,Canned Goods,32,10,"century,tuna,flakes,oil,95g,ulam,delata",https://res.cloudinary.com/di1fg6nu/image/upload/v1794274197/gdufbaegdtxvgu1hw5ib.png
