@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jeriel Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#1d4e9e;--mango:#f6b21b;--chili:#c8372d;--leaf:#2e7d4f;--bg:#eaf0f8;--ink:#14213d;--card:#fff;--line:#c9d6ea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+h1,h2,h3{font-family:'Baloo 2',system-ui,sans-serif;margin:0;line-height:1.1}
+header{background:var(--blue);color:#fff;border-bottom:6px solid var(--mango);padding:10px 16px;display:flex;gap:8px;align-items:center}
+header h1{font-size:1.5rem;color:var(--mango);cursor:pointer}
+.addr{font-size:.78rem;opacity:.9}
+main{max-width:1060px;margin:0 auto;padding:16px 16px 100px}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:0;border-radius:8px;padding:9px 14px;background:var(--blue);color:#fff;font-weight:600}
+button.alt{background:#fff;color:var(--blue);border:2px solid var(--blue)}
+button.go{background:var(--chili)}
+button.hd{background:transparent;color:#fff;border:2px solid #ffffff80;padding:6px 12px}
+button.tab{background:#fff;color:var(--ink);border:2px solid var(--line)}
+button.tab.on{background:#e3ebf8;border-color:var(--blue);color:var(--blue)}
+button.full{width:100%}
+button.del{color:var(--chili);border-color:var(--chili)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+input,select,textarea{width:100%;padding:9px 10px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+label{display:block;font-weight:600;margin:10px 0 4px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:14px}
+.narrow{max-width:520px;margin:12px auto}
+.muted{color:#55657f;font-size:.88rem}
+.msg{padding:10px 12px;border-radius:8px;margin:10px 0;font-weight:600}
+.msg.err{background:#fde5e2;color:#8a1f17}.msg.ok{background:#dff3e6;color:#1d5a37}
+.row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.dot.live{background:var(--leaf)}.dot.idle{background:#9aa7bd}
+.rider{border:2px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}.rider.sel{border-color:var(--blue);background:#eef4ff}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.lk{display:inline-block;padding:4px 10px;border-radius:99px;background:#e3ebf8;color:var(--blue);font-size:.82rem;font-weight:600;text-decoration:none}
+.Requested{background:#8a6d00}.Accepted{background:var(--blue)}.Delivered{background:var(--leaf)}.Declined{background:var(--chili)}
+.hide{display:none!important}
+/* fixed bottom navigation */
+.bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
+.bn button{flex:1;background:none;color:var(--ink);border-radius:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.82rem}
+.bn button b{font-size:1.25rem;line-height:1}
+.bn button.on{background:#e3ebf8;color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
+/* shop */
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 4px}
+.sw{position:relative;flex:1;min-width:150px}.sw input{padding-right:42px}
+input[type=search]::-webkit-search-cancel-button{display:none}
+.x{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:28px;height:28px;padding:0;border-radius:50%;background:var(--line);color:var(--ink);font-size:1.15rem;line-height:1}
+.shopwrap{display:flex;gap:14px;align-items:flex-start}
+.shopmain{flex:1;min-width:0}
+#side{width:220px;flex:none;position:sticky;top:78px;max-height:calc(100vh - 190px);overflow:auto}
+#side.collapsed{display:none}
+#side h3{margin-bottom:6px}
+.cat{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;color:var(--ink);text-align:left;padding:8px 10px;border-radius:8px;font-weight:500}
+.cat.on{background:var(--mango);font-weight:700}.cat small{opacity:.7}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px}
+.grid .card{display:flex;flex-direction:column;padding:8px}
+.grid .card b{font-size:.95rem;line-height:1.2}.grid .muted{font-size:.74rem;line-height:1.3}
+.grid .ctl{margin-top:auto;padding-top:8px}
+.price{font-family:'Baloo 2',sans-serif;font-size:1.15rem;color:var(--blue)}
+.pimg{height:84px;display:flex;align-items:center;justify-content:center;background:#f4f8fd;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.pimg img{max-width:100%;max-height:100%;object-fit:contain}.pimg span{font-size:2.2rem;opacity:.3}
+.thumb{width:46px;height:46px;flex:none;margin:0}.thumb span{font-size:1.4rem}
+.tag{display:inline-block;font-size:.65rem;background:#e3ebf8;border-radius:6px;padding:0 5px;margin:3px 3px 0 0}
+.qty{display:flex;align-items:center;justify-content:center;gap:14px}.qty button{padding:6px 16px}
+/* cart */
+.line{display:grid;grid-template-columns:1fr auto 80px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.line .qty{gap:8px}.line .qty button{padding:3px 12px}.line>:last-child{text-align:right;font-weight:700}
+/* orders */
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-weight:700;font-size:.82rem;color:#fff}
+.Pending{background:#8a6d00}.Complete{background:var(--leaf)}.Incomplete{background:var(--chili)}
+.order{margin-bottom:12px}
+.order ul{margin:8px 0;padding:0;list-style:none}
+.order li{display:flex;gap:8px;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)}
+.order li label{display:flex;gap:8px;align-items:center;margin:0;font-weight:400}
+.order li input[type=checkbox]{width:auto}
+.miss{color:var(--chili);font-weight:700}
+nav.tabs{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+/* admin inventory */
+.tg{display:inline-flex;align-items:center;background:#fff3cf;border:1px solid var(--mango);border-radius:99px;padding:1px 2px 1px 10px;font-size:.85rem;margin:2px}
+.tg button{background:none;color:var(--ink);padding:0 7px}.tagbox{display:flex;flex-wrap:wrap}
+dialog{border:3px solid var(--blue);border-radius:12px;padding:16px;width:min(520px,94vw);color:var(--ink);background:#fff}
+dialog::backdrop{background:rgba(20,33,61,.55)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prow{display:grid;grid-template-columns:1fr 90px 60px auto;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.prow.head{font-weight:700;color:#55657f;font-size:.85rem}
+.acts{display:flex;gap:6px}.acts button{padding:6px 12px}
+#toast{position:fixed;top:10px;left:10px;right:10px;max-width:520px;margin:0 auto;background:var(--leaf);color:#fff;padding:14px;border-radius:10px;font-weight:700;z-index:40;cursor:pointer;box-shadow:0 4px 14px #0005}
+#sideBk{position:fixed;inset:0;background:#14213d88;z-index:29}
+@media(max-width:700px){
+  .lbl{display:none}
+  #side{position:fixed;top:0;left:0;bottom:0;width:80%;max-width:300px;max-height:none;z-index:30;border-radius:0 12px 12px 0;padding:20px 14px 90px}
+  .grid{grid-template-columns:1fr 1fr;gap:8px}
+}
+@media(max-width:560px){.prow{grid-template-columns:1fr 1fr}.prow>:first-child{grid-column:1/-1}.prow.head{display:none}.acts{grid-column:1/-1}.acts button{flex:1}.line{grid-template-columns:1fr auto}.line>:last-child{grid-column:1/-1;text-align:left}.two{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:no-preference){button{transition:filter .15s}button:hover{filter:brightness(1.1)}}
+</style>
+</head>
+<body>
+<script>window.addEventListener('error',function(e){var m=document.getElementById('msg');if(m)m.innerHTML='<div class="msg err">Page error: '+e.message+'. Please refresh.</div>';});</script>
+<header>
+  <div style="flex:1"><h1 onclick="home()" class="stName">Jeriel Store</h1><div class="addr">📍 <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></div></div>
+  <span class="addr hide" id="who"></span>
+  <button class="hd hide" id="out" onclick="signOut()">Sign out</button>
+</header>
+<main>
+  <div id="msg"></div>
+
+  <!-- Customer: shop -->
+  <div id="shop" class="v">
+    <div class="bar">
+      <div class="row" style="flex-wrap:nowrap">
+        <button class="alt" id="sideBtn" onclick="toggleSide()" aria-controls="side" aria-label="Categories">☰<span class="lbl"> Categories</span></button>
+        <div class="sw"><input id="search" type="search" placeholder="Search: pancit canton, sabon, kape..." aria-label="Search products" oninput="onSearch()" autocomplete="off">
+          <button class="x hide" id="sx" aria-label="Clear search" onclick="clearSearch()">×</button></div>
+      </div>
+      <div class="muted" id="count" aria-live="polite" style="margin-top:4px"></div>
+    </div>
+    <div class="shopwrap">
+      <aside id="side" class="card collapsed" aria-label="Categories"></aside>
+      <div class="shopmain"><div class="grid" id="products"><p class="muted">Loading products…</p></div>
+        <p class="hide" id="more" style="text-align:center"><button class="alt" onclick="lim+=40;drawShop()">Show more</button></p></div>
+    </div>
+  </div>
+  <div id="sideBk" class="hide" onclick="toggleSide()"></div>
+
+  <!-- Customer: cart -->
+  <div id="cart" class="v hide">
+    <div class="row"><h2>Your cart</h2><button class="alt del hide" id="emptyBtn" onclick="clearCart()">🗑 Empty cart</button></div>
+    <div class="card" style="margin-top:10px">
+      <div id="cartLines"></div>
+      <div class="row" style="margin-top:10px"><b id="total"></b><button class="alt" onclick="view('shop')">+ Add more items</button></div>
+    </div>
+    <div class="card hide" id="co" style="margin-top:12px">
+      <h3>Your details</h3>
+      <label for="cName">Name *</label><input id="cName" autocomplete="name">
+      <label for="cPhone">Mobile number * <span class="muted">(09XXXXXXXXX)</span></label>
+      <input id="cPhone" type="tel" inputmode="numeric" placeholder="09171234567" autocomplete="tel" oninput="fmtPhone(this)">
+      <label for="cEmail">Email address <span class="muted">(optional – we'll send a copy of your order)</span></label>
+      <input id="cEmail" type="email" autocomplete="email" placeholder="you@example.com">
+      <label for="cMethod">Pickup or delivery? *</label>
+      <select id="cMethod" onchange="toggleAddr()"><option value="Pickup">Pickup at the store</option><option value="Delivery">Deliver to me</option></select>
+      <p class="muted" id="pickAddr"></p>
+      <div id="addrBox" class="hide"><label for="cAddr">Delivery address *</label>
+        <textarea id="cAddr" rows="2" autocomplete="street-address" placeholder="House no., street, barangay, city"></textarea></div>
+      <div id="riderBox" class="hide"><label>Choose your delivery rider</label>
+        <p class="muted" id="riderHint"></p><div id="riders"></div></div>
+      <label for="cNote">Note to the store (optional)</label><input id="cNote" maxlength="200">
+      <p><button class="go full" id="place" onclick="checkout()">Place order</button></p>
+    </div>
+  </div>
+
+  <div id="done" class="v hide card narrow" style="text-align:center">
+    <h2>Order received! 🎉</h2>
+    <p>Order ID: <b id="dId"></b><br>Total: <b id="dTotal"></b></p>
+    <p class="muted" id="dAddr"></p>
+    <p class="muted" id="dMail"></p>
+    <p class="muted">We'll notify you here when the store confirms your order. You can also check "Track order".</p>
+    <p><button onclick="view('track')">Track order</button> <button class="alt" onclick="view('shop')">Keep shopping</button></p>
+  </div>
+
+  <!-- Customer: track + 30-day history -->
+  <div id="track" class="v hide">
+    <div class="card">
+      <button class="alt" onclick="view('shop')">← Back to store</button>
+      <h2 style="margin-top:12px">My orders <span class="muted">(last 30 days on this device)</span></h2>
+      <p class="muted" id="histSum"></p>
+      <div id="hist"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Find an order</h3>
+      <label for="tId">Order ID</label><input id="tId" placeholder="ORD-260101-123456" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
+      <label for="tPhone">Mobile number used <span class="muted">(09XXXXXXXXX)</span></label>
+      <input id="tPhone" type="tel" inputmode="numeric" placeholder="09171234567" oninput="fmtPhone(this)">
+      <p><button onclick="doTrack()">Check status</button></p>
+      <div id="tOut"></div>
+    </div>
+  </div>
+
+  <!-- Admin sign-in -->
+  <div id="login" class="v hide card narrow">
+    <button class="alt" onclick="view('shop')">← Back to store</button>
+    <h2 style="margin-top:12px">Staff sign-in</h2>
+    <div id="stepEmail"><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="email">
+      <div id="pwBox"><label for="lPw">Password</label><input id="lPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginPw()"></div>
+      <p><button id="codeBtn" onclick="loginPw()">Sign in</button> <button class="alt hide" id="codeLink" onclick="askCode()">Email me a code instead</button></p></div>
+    <div id="stepCode" class="hide"><p class="muted">We sent a 6-digit code to <b id="sentTo"></b>.</p>
+      <label for="lCode">Code</label><input id="lCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <p class="row"><button onclick="verify()">Sign in</button><button class="alt" onclick="askCode()">Send a new code</button></p></div>
+  </div>
+
+  <!-- Admin -->
+  <div id="aOrders" class="v hide"></div>
+  <div id="aProducts" class="v hide"></div>
+  <div id="aStaff" class="v hide"></div>
+  <div id="rDeliveries" class="v hide"></div>
+  <p class="muted" style="text-align:center;margin-top:24px">📍 <span class="stName">Jeriel Store</span> · <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></p>
+</main>
+
+<nav class="bn" id="bnC" aria-label="Customer menu">
+  <button data-v="shop" onclick="view('shop')"><b>🏪</b><span>Shop</span></button>
+  <button data-v="track" onclick="view('track')"><b>📦</b><span id="trkLbl">Track order</span></button>
+  <button data-v="cart" onclick="view('cart')"><b>🛒</b><span id="cartLbl">Cart (0)</span></button>
+  <button data-v="login" onclick="view('login')"><b>🔑</b><span>Staff</span></button>
+</nav>
+<nav class="bn hide" id="bnA" aria-label="Admin menu">
+  <button data-v="aOrders" onclick="view('aOrders')"><b>📋</b><span id="ordLbl">Orders</span></button>
+  <button data-v="aProducts" onclick="view('aProducts')"><b>🏷️</b><span>Inventory</span></button>
+</nav>
+<div id="toast" class="hide" role="status" onclick="toastGo()"></div>
+
+<dialog id="pd" aria-labelledby="pdTitle">
+  <h2 id="pdTitle">Product</h2>
+  <div id="pErr"></div>
+  <label for="pName">Product name</label><input id="pName" onblur="autoTags()">
+  <label>Product image</label>
+  <div class="row" style="justify-content:flex-start"><div class="pimg thumb" id="pPrev" style="width:80px;height:80px"></div>
+    <div style="flex:1;min-width:180px"><input type="file" id="pFile" accept="image/*" onchange="pickImg(this)">
+      <label style="font-weight:400;display:flex;gap:6px;align-items:center;margin:6px 0 0"><input type="checkbox" id="pClear" checked style="width:auto"> Remove white background</label>
+      <button class="alt" style="margin-top:6px;padding:4px 10px" onclick="img='';imgChanged=true;showPrev()">Remove image</button></div></div>
+  <div id="pUp" class="muted"></div>
+  <label for="pCat">Category</label>
+  <select id="pCat" onchange="$('pNewCat').classList.toggle('hide', this.value!=='__new');if(this.value==='__new')$('pNewCat').focus()"></select>
+  <input id="pNewCat" class="hide" placeholder="New category name" style="margin-top:6px" aria-label="New category name">
+  <div class="two"><div><label for="pPrice">Base price (₱)</label><input id="pPrice" type="number" min="0" step="0.5"></div>
+    <div><label for="pStock">Stock</label><input id="pStock" type="number" min="0" step="1"></div></div>
+  <p class="muted" style="margin:4px 0 0">Customers see this price + ₱1.</p>
+  <label for="tagIn">Search tags</label>
+  <div class="tagbox" id="tagBox"></div>
+  <input id="tagIn" placeholder="Type a tag, press Enter (e.g. noodles, canton)" onkeydown="tagKey(event)" onblur="addTags(this.value);this.value=''">
+  <p class="row"><button class="alt" onclick="$('pd').close()">Cancel</button><button class="go" id="pSave" onclick="saveProd()">Save product</button></p>
+</dialog>
+
+<dialog id="sd" aria-labelledby="sdTitle">
+  <h2 id="sdTitle">Staff</h2><div id="sErr"></div>
+  <label for="sName">Name</label><input id="sName">
+  <label for="sEmail">Email (used to sign in)</label><input id="sEmail" type="email">
+  <label for="sPhone">Mobile number <span class="muted">(09XXXXXXXXX)</span></label><input id="sPhone" type="tel" inputmode="numeric" oninput="fmtPhone(this)">
+  <label for="sRole">Role</label>
+  <select id="sRole"><option value="cashier">Cashier – orders and inventory, cannot delete items</option><option value="delivery">Delivery rider – deliveries only</option></select>
+  <label for="sPass">Password <span class="muted" id="sPassNote">(at least 6 characters)</span></label><input id="sPass" type="text" autocomplete="off">
+  <label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" id="sActive" checked style="width:auto"> Active (can sign in)</label>
+  <p class="row"><button class="alt" onclick="$('sd').close()">Cancel</button><button class="go" id="sSave" onclick="saveStaff()">Save</button></p>
+</dialog>
+<script>
+let S = null, products = [], cart = {}, cat = 'All', q = '', lim = 40, tm, cur = 'shop', sideOpen = innerWidth > 700, unseen = 0;
+let riders = [], riderSel = '', CLD = {cloud:'', preset:''}, imgChanged = false, adm = [], aq = '', tags = [], img = '', aData = [], aFilter = 'Pending', oq = '', known = null, pollT, audioCtx;
+const $ = id => document.getElementById(id);
+let ADDR = '743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan', STORE = 'Jeriel Store';
+const peso = n => '₱' + Number(n).toLocaleString('en-PH');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const api = async (fn, ...a) => {
+  let r;
+  try { r = await fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})}); }
+  catch(e){ throw new Error('Cannot reach the server. Check your internet connection.'); }
+  const j = await r.json().catch(() => null);
+  if(!r.ok) throw new Error(j && j.error ? j.error + (j.detail ? ' (' + j.detail + ')' : '') :
+    r.status === 404 ? 'Server function not found (HTTP 404). In Vercel, check the project Root Directory.' :
+    'Server error (HTTP ' + r.status + '). Open your-site/api/rpc to see what is wrong.');
+  return j.result; };
+const fmt = d => new Date(d).toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'});
+const store = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+const load = k => { try { return JSON.parse(sessionStorage.getItem(k)); } catch(e){ return null; } };
+const lstore = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+const lload = k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } };
+const pickup = () => 'Pick up at: ' + STORE + ' ' + ADDR;
+
+function show(text, type){ $('msg').innerHTML = text ? `<div class="msg ${type||'err'}" role="alert">${esc(text)}</div>` : ''; if(text) window.scrollTo(0,0); }
+async function run(fn, btn){ if(btn) btn.disabled = true; show('');
+  try { return await fn(); } catch(e){ const m = e.message || String(e);
+    if(S && /sign in again|session expired/i.test(m)){ store('sariA', null); location.reload(); return; } show(m); }
+  finally { if(btn) btn.disabled = false; } }
+function toast(t){ $('toast').textContent = '🔔 ' + t; $('toast').classList.remove('hide'); beep(); if(!S) setTimeout(() => $('toast').classList.add('hide'), 15000); }
+function toastGo(){ $('toast').classList.add('hide'); view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 'track'); }
+function beep(){ try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+  [880, 1175].forEach((f, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + i*.25;
+    o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t+.4); o.start(t); o.stop(t+.4); }); } catch(e){} }
+
+/* ----- Product images (Cloudinary) ----- */
+const SL = '/' + '/';
+function cld(u, w){ const m = '/upload/', i = u.indexOf(m); return i < 0 ? u : u.slice(0, i + m.length) + 'c_fit,w_' + w + ',h_' + w + ',f_auto,q_auto/' + u.slice(i + m.length); }
+function imgTag(u, w){ return u ? '<img src="' + esc(cld(u, w || 320)) + '" data-raw="' + esc(u) + '" alt="" loading="lazy" onerror="imgFail(this)">' : '<span>🛒</span>'; }
+function imgFail(el){ if(el.dataset.raw && !el.dataset.tried){ el.dataset.tried = '1'; el.src = el.dataset.raw; return; }
+  if(el.closest('#pPrev')) $('pUp').textContent = 'The preview could not load this image link. Check it exists in your Cloudinary Media Library.';
+  el.replaceWith(Object.assign(document.createElement('span'), {textContent:'🛒'})); }
+const pimg = p => '<div class="pimg">' + imgTag(p.image, 320) + '</div>';
+async function cldUpload(dataUrl){
+  if(!CLD.cloud || !CLD.preset || CLD.cloud.indexOf('your-') === 0) throw new Error('Cloudinary is not set up yet. Put your cloud name and upload preset in Code.gs, then redeploy.');
+  const fd = new FormData(); fd.append('file', dataUrl); fd.append('upload_preset', CLD.preset);
+  const r = await fetch('https:' + SL + 'api.cloudinary.com/v1_1/' + CLD.cloud + '/image/upload', {method:'POST', body:fd});
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok || !j.secure_url) throw new Error('Cloudinary: ' + ((j.error && j.error.message) || 'upload failed'));
+  return j.secure_url; }
+
+/* ----- Navigation ----- */
+function home(){ view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 'shop'); }
+function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; applySide();
+  document.querySelectorAll('.v').forEach(x => x.classList.toggle('hide', x.id!==v));
+  document.querySelectorAll('.bn button').forEach(b => b.classList.toggle('on', b.dataset.v===v));
+  ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts, aStaff:loadStaff, rDeliveries:loadRider})[v]?.();
+  updateCart(); window.scrollTo(0,0); }
+
+/* ----- Shop: cached list + prebuilt search index, refreshed in background ----- */
+function prep(l){ products = l.map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
+  .sort((a,b) => (b.stock>0)-(a.stock>0) || a.name.localeCompare(b.name)); }
+function loadShop(){
+  const c = load('sariP'); if(c && !products.length){ prep(c); drawShop(); }
+  api('getProducts').then(l => { store('sariP', l); prep(l); if(cur==='shop') drawShop(); if(cur==='cart') drawCartView(); })
+    .catch(e => { if(!products.length) show(e.message || String(e)); });
+}
+function applySide(){ $('side').classList.toggle('collapsed', !sideOpen); $('sideBk').classList.toggle('hide', !(sideOpen && innerWidth<=700 && cur==='shop')); }
+function toggleSide(){ sideOpen = !sideOpen; applySide(); }
+function onSearch(){ q = $('search').value; lim = 40; $('sx').classList.toggle('hide', !q); clearTimeout(tm); tm = setTimeout(drawShop, 120); }
+function clearSearch(){ $('search').value = ''; q = ''; lim = 40; $('sx').classList.add('hide'); drawShop(); $('search').focus(); }
+function setCat(c){ cat = c; lim = 40; if(innerWidth<=700) sideOpen = false; drawShop(); }
+function fmtPhone(el){ let d = el.value.replace(/\D/g, ''); if(d.indexOf('63')===0 && d.length>11) d = '0' + d.slice(2); el.value = d.slice(0, 11); }
+function ctl(p){ const n = cart[p.id] || 0;
+  return n ? `<div class="qty"><button class="alt" aria-label="Remove one ${esc(p.name)}" onclick="chg('${p.id}',-1)">−</button><b>${n}</b>
+      <button aria-label="Add one ${esc(p.name)}" ${n>=p.stock?'disabled':''} onclick="chg('${p.id}',1)">+</button></div>`
+    : `<button class="go full" ${p.stock<1?'disabled':''} onclick="chg('${p.id}',1)">${p.stock<1?'Out of stock':'Add to cart'}</button>`; }
+function drawShop(){
+  const counts = {}; products.forEach(p => counts[p.category] = (counts[p.category]||0) + 1);
+  const names = Object.keys(counts).filter(Boolean).sort((a,b) => a.localeCompare(b));
+  $('side').innerHTML = '<h3>Categories</h3>' + ['All', ...names].map(c =>
+    `<button class="cat ${c===cat?'on':''}" onclick="setCat(this.dataset.c)" data-c="${esc(c)}"><span>${esc(c)}</span><small>${c==='All'?products.length:counts[c]}</small></button>`).join('');
+  const terms = norm(q).split(/\s+/).filter(Boolean);
+  const f = products.filter(p => (cat==='All' || p.category===cat) && terms.every(t => p._s.includes(t)));
+  $('count').textContent = f.length + (f.length===1 ? ' product' : ' products') + (cat!=='All' ? ' in ' + cat : '');
+  $('products').innerHTML = f.slice(0, lim).map(p => `<div class="card">${pimg(p)}
+    <b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>
+    <div class="price">${peso(p.price)}</div>
+    <div class="ctl" id="c_${p.id}">${ctl(p)}</div></div>`).join('')
+    || '<p>No match. Try a shorter word like "noodles" or "soap".</p>';
+  $('more').classList.toggle('hide', f.length <= lim);
+  applySide(); updateCart();
+}
+
+/* ----- Cart ----- */
+function chg(id, d){ const p = products.find(x => x.id===id); if(!p) return;
+  const n = Math.max(0, Math.min(p.stock, (cart[id]||0)+d)); if(n) cart[id] = n; else delete cart[id];
+  store('sariC', cart);
+  if(cur==='cart') drawCartView(); else { const el = $('c_'+id); if(el) el.innerHTML = ctl(p); updateCart(); } }
+function clearCart(){ if(!confirm('Remove all items from your cart?')) return; cart = {}; store('sariC', cart); drawCartView(); }
+function cartTotals(){ let n = 0, t = 0;
+  Object.keys(cart).forEach(id => { const p = products.find(x => x.id===id); if(p){ n += cart[id]; t += p.price*cart[id]; } }); return {n, t}; }
+function updateCart(){ const {n, t} = cartTotals(); $('cartLbl').textContent = n ? `Cart (${n}) · ${peso(t)}` : 'Cart (0)'; }
+function drawCartView(){
+  Object.keys(cart).forEach(id => { const p = products.find(x => x.id===id); if(products.length && (!p || p.stock<1)) delete cart[id]; else if(p && cart[id]>p.stock) cart[id] = p.stock; });
+  store('sariC', cart);
+  const {n, t} = cartTotals();
+  $('cartLines').innerHTML = n ? Object.keys(cart).map(id => { const p = products.find(x => x.id===id); if(!p) return '';
+    return `<div class="line"><div><b>${esc(p.name)}</b><div class="muted">${peso(p.price)} each</div></div>
+      <div class="qty"><button class="alt" aria-label="Remove one ${esc(p.name)}" onclick="chg('${id}',-1)">−</button><b>${cart[id]}</b>
+      <button aria-label="Add one ${esc(p.name)}" ${cart[id]>=p.stock?'disabled':''} onclick="chg('${id}',1)">+</button></div>
+      <div>${peso(p.price*cart[id])}</div></div>`; }).join('')
+    : '<p>Your cart is empty. <button class="alt" onclick="view(\'shop\')">Browse products</button></p>';
+  $('total').textContent = n ? 'Total: ' + peso(t) : '';
+  $('co').classList.toggle('hide', !n); $('emptyBtn').classList.toggle('hide', !n);
+  const c = lload('sariCust'); if(c && !$('cName').value){ $('cName').value = c.name||''; $('cPhone').value = c.contact||''; $('cEmail').value = c.email||''; $('cAddr').value = c.address||''; }
+  toggleAddr(); updateCart(); }
+function toggleAddr(){ const d = $('cMethod').value==='Delivery'; $('addrBox').classList.toggle('hide', !d); $('riderBox').classList.toggle('hide', !d);
+  $('pickAddr').textContent = d ? '' : '📍 ' + pickup(); if(d) loadRiders(); }
+function contactLinks(phone){ const d = String(phone || '').replace(/\D/g, ''); if(!d) return ''; const intl = '63' + d.slice(1);
+  return `<span class="links"><a class="lk" href="tel:${d}">📞 Call</a><a class="lk" href="sms:${d}">💬 Text</a><a class="lk" href="viber://chat?number=%2B${intl}">Viber</a><a class="lk" href="https://wa.me/${intl}" target="_blank" rel="noopener">WhatsApp</a></span>`; }
+async function loadRiders(){ try { riders = await api('getRiders'); } catch(e){ riders = []; } drawRiders(); }
+function drawRiders(){ const on = riders.filter(r => r.online);
+  $('riderHint').textContent = !riders.length ? '' : on.length ? 'Call or message a rider to agree on the delivery, then choose them. They must accept before it is on the way.' : 'No riders are online right now. You can still place the order and the store will assign a rider.';
+  $('riders').innerHTML = riders.length ? riders.map(r => `<div class="rider ${riderSel===r.id?'sel':''}"><div><b><span class="dot ${r.online?'live':'idle'}"></span>${esc(r.name)}</b> <span class="muted">${r.online?'Online':'Offline'}</span></div>
+    ${contactLinks(r.phone)}<button class="${riderSel===r.id?'':'alt'} full" ${r.online?'':'disabled'} onclick="pickRider('${r.id}')">${riderSel===r.id?'✓ Selected':'Choose this rider'}</button></div>`).join('')
+    : '<p class="muted">No riders are set up yet. The store will arrange your delivery.</p>'; }
+function pickRider(id){ riderSel = riderSel===id ? '' : id; drawRiders(); }
+setInterval(() => { if(cur==='cart' && $('cMethod').value==='Delivery') loadRiders(); }, 20000);
+function checkout(){
+  const del = $('cMethod').value==='Delivery';
+  const o = {name:$('cName').value, contact:$('cPhone').value, email:$('cEmail').value, method:$('cMethod').value, address:$('cAddr').value, note:$('cNote').value,
+    rider: del ? riderSel : '', cart:Object.keys(cart).map(id => ({id, qty:cart[id]}))};
+  if(!/^09\d{9}$/.test(o.contact)) return show('Enter your mobile number as 09XXXXXXXXX (11 digits).');
+  if(del && !riderSel && riders.some(r => r.online)) return show('Please choose a delivery rider.');
+  const rname = (riders.find(r => r.id===riderSel) || {}).name;
+  run(async () => { const r = await api('placeOrder', o);
+    lstore('sariCust', {name:o.name, contact:o.contact, email:o.email, address:o.address}); saveOrder(r.orderId, o.contact, 'Pending', Date.now(), o.rider ? 'Requested' : '');
+    cart = {}; store('sariC', cart); $('cNote').value = ''; riderSel = ''; sessionStorage.removeItem('sariP');
+    $('dId').textContent = r.orderId; $('dTotal').textContent = peso(r.total);
+    $('dAddr').textContent = o.method==='Pickup' ? '📍 ' + pickup() : 'We will deliver to: ' + o.address + (rname ? '. ' + rname + ' must accept your delivery. You will be notified here.' : '. The store will assign a rider.');
+    $('dMail').textContent = o.email.trim() ? 'If email is set up for the store, a copy goes to ' + o.email.trim() + '.' : '';
+    view('done'); }, $('place')); }
+
+/* ----- My orders (30 days), tracking and customer notifications ----- */
+const myOrders = () => (lload('sariOrders') || []).filter(o => Date.now() - o.t < 30*864e5);
+function saveOrder(id, contact, status, t, ds){ const l = myOrders().filter(o => o.id!==id); l.unshift({id, contact, status, t, ds:ds || ''}); lstore('sariOrders', l.slice(0, 40)); }
+function syncStatus(o, notify){ const l = lload('sariOrders') || [], m = l.find(x => x.id===o.id); if(!m) return; const msgs = [];
+  if(m.status !== o.status){ msgs.push(o.status==='Complete' ? `Your order ${o.id} is complete! ✅` : `Your order ${o.id} has missing items. Tap to see details.`); m.status = o.status; }
+  const ds = o.deliveryStatus || ''; if((m.ds || '') !== ds){ const nm = o.rider ? o.rider.name : 'Your rider';
+    const t = {Accepted:`${nm} accepted your delivery 🛵`, Declined:`${nm} can't take your delivery. The store will assign another rider.`, Delivered:`Your order ${o.id} was delivered ✅`}[ds]; if(t) msgs.push(t); m.ds = ds; }
+  lstore('sariOrders', l); if(notify && msgs.length){ unseen += msgs.length; badge(); toast(msgs[msgs.length-1]); } }
+function badge(){ $('trkLbl').textContent = 'Track order' + (unseen ? ` (${unseen})` : ''); }
+async function custPoll(){ if(S) return; const p = myOrders().filter(o => o.status==='Pending' || o.ds==='Requested' || o.ds==='Accepted'); if(!p.length) return;
+  try { (await api('trackMany', p.map(({id, contact}) => ({id, contact})))).forEach(o => syncStatus(o, true)); } catch(e){} }
+async function openTrack(){ unseen = 0; badge(); const l = myOrders();
+  if(!l.length){ $('hist').innerHTML = '<p class="muted">No orders yet from this device. Use "Find an order" below if you ordered elsewhere.</p>'; $('histSum').textContent = ''; return; }
+  try { const r = await api('trackMany', l.map(({id, contact}) => ({id, contact}))); r.forEach(o => syncStatus(o, false));
+    const c = s => r.filter(o => o.status===s).length;
+    $('histSum').textContent = `${r.length} orders · ${c('Pending')} pending · ${c('Complete')} complete · ${c('Incomplete')} incomplete`;
+    $('hist').innerHTML = r.map(o => orderHtml(o, false)).join('') || '<p class="muted">No orders in the last 30 days.</p>';
+  } catch(e){ show(e.message || String(e)); } }
+function doTrack(){
+  if(!/^09\d{9}$/.test($('tPhone').value)) return show('Enter the mobile number as 09XXXXXXXXX (11 digits).');
+  run(async () => { const o = await api('trackOrder', $('tId').value, $('tPhone').value);
+    saveOrder(o.id, $('tPhone').value, o.status, Date.parse(o.created) || Date.now(), o.deliveryStatus);
+    $('tOut').innerHTML = orderHtml(o, false) + (o.status==='Pending' ? '<p class="muted">The store has not confirmed this order yet.</p>' : ''); openTrackQuiet(); }); }
+function openTrackQuiet(){ const l = myOrders(); api('trackMany', l.map(({id, contact}) => ({id, contact}))).then(r => {
+  $('hist').innerHTML = r.map(o => orderHtml(o, false)).join(''); }).catch(() => {}); }
+
+/* ----- Order card (shared) ----- */
+function riderBlock(o, admin){
+  if(o.method !== 'Delivery') return '';
+  if(o.rider) return `<div class="muted">🛵 Rider: <b>${esc(o.rider.name)}</b> <span class="badge ${o.deliveryStatus}">${o.deliveryStatus}</span></div>${contactLinks(o.rider.phone)}` +
+    (!admin && o.deliveryStatus==='Declined' ? '<div class="muted">The rider declined. The store will assign another rider.</div>' : '');
+  if(admin && o.status==='Pending' || admin && o.deliveryStatus==='Declined') return '';
+  return '<div class="muted">🛵 Rider: not assigned yet</div>'; }
+function assignHtml(o){
+  if(o.method !== 'Delivery' || (o.rider && o.deliveryStatus !== 'Declined')) return '';
+  const opts = riders.map(r => `<option value="${r.id}">${esc(r.name)} ${r.online ? '(online)' : '(offline)'}</option>`).join('');
+  return riders.length ? `<p class="row" style="justify-content:flex-start"><select id="rs_${o.id}" style="max-width:260px">${opts}</select><button class="alt" onclick="assignRider('${o.id}', this)">Assign rider</button></p>` : '<div class="muted">No riders set up yet (Staff tab).</div>'; }
+function orderHtml(o, admin){
+  const miss = o.missing.map(m => m.id);
+  return `<div class="card order" id="o_${o.id}">
+    <div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.status}">${o.status}</span></div>
+    <div class="muted">${fmt(o.created)} · ${esc(o.method)}${admin ? ' · '+esc(o.name)+' · <a href="tel:'+esc(o.contact)+'">'+esc(o.contact)+'</a>'+(o.email?' · '+esc(o.email):'') : ''}</div>
+    <div class="muted">${o.method==='Delivery' ? 'Deliver to: '+esc(o.address) : esc(pickup())}</div>
+    ${riderBlock(o, admin)}${admin ? assignHtml(o) : ''}
+    ${o.note ? `<div class="muted">Customer note: ${esc(o.note)}</div>` : ''}
+    <ul>${o.items.map(i => `<li>${admin && o.status==='Pending'
+        ? `<label><input type="checkbox" value="${i.id}"> ${i.qty} × ${esc(i.name)} <span class="muted">(tick if missing)</span></label>`
+        : `<span class="${miss.includes(i.id)?'miss':''}">${i.qty} × ${esc(i.name)}${miss.includes(i.id)?' (missing)':''}</span>`}
+        <span>${peso(i.qty*i.price)}</span></li>`).join('')}</ul>
+    <div class="row"><b>Total ${peso(o.total)}</b>
+      ${o.status==='Incomplete' ? `<span class="miss">Adjusted: ${peso(o.total - o.missing.reduce((s,m)=>s+m.price*m.qty,0))}</span>` : ''}</div>
+    ${o.adminNote ? `<div class="muted">Store note: ${esc(o.adminNote)}</div>` : ''}
+    ${admin && o.status==='Pending' ? `<label for="n_${o.id}">Note to customer (optional)</label><input id="n_${o.id}">
+      <p><button class="go" onclick="review('${o.id}', this)">Confirm order</button>
+      <span class="muted"> Nothing ticked = complete.</span></p>` : ''}
+  </div>`;
+}
+
+/* ----- Staff sign-in, role menus, online status and alerts ----- */
+function askCode(){ const e = $('lEmail').value.trim();
+  run(async () => { await api('sendCode', e); $('sentTo').textContent = e; $('stepEmail').classList.add('hide'); $('stepCode').classList.remove('hide');
+    $('lCode').focus(); show('Code sent. Check your inbox (and spam).', 'ok'); }, event && event.target); }
+function verify(){ run(async () => { S = await api('verifyCode', $('lEmail').value, $('lCode').value); store('sariA', S); startAdmin(); }, event.target); }
+function loginPw(){ run(async () => { S = await api('loginPassword', $('lEmail').value, $('lPw').value); store('sariA', S); startAdmin(); }, $('codeBtn')); }
+async function signOut(){ try { await api('signOut', S.token); } catch(e){} store('sariA', null); location.reload(); }
+const MENUS = {
+  admin: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory'], ['aStaff','👥','Staff']],
+  cashier: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory']],
+  delivery: [['rDeliveries','🛵','Deliveries']] };
+function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove('hide'); $('out').classList.remove('hide');
+  $('who').textContent = (S.name || 'Staff') + ' · ' + S.role + ' · 🟢 online'; $('who').classList.remove('hide');
+  $('bnA').innerHTML = (MENUS[S.role] || MENUS.cashier).map((m, i) => `<button data-v="${m[0]}" onclick="view('${m[0]}')"><b>${m[1]}</b><span ${i===0?'id="ordLbl"':''}>${m[2]}</span></button>`).join('');
+  view(S.role==='delivery' ? 'rDeliveries' : 'aOrders');
+  try { Notification.requestPermission(); } catch(e){}
+  poll(); pollT = setInterval(poll, 20000); }
+async function poll(){ /* also keeps this person marked online */
+  try { const rider = S.role==='delivery', l = await api(rider ? 'riderPoll' : 'adminPoll', S.token), ids = l.map(o => o.id);
+    const fresh = known ? l.filter(o => !known.includes(o.id)) : []; known = ids;
+    $('ordLbl').textContent = rider ? (ids.length ? `Deliveries (${ids.length} new)` : 'Deliveries') : (ids.length ? `Orders (${ids.length} pending)` : 'Orders');
+    if(fresh.length){ const o = fresh[0];
+      const t = fresh.length>1 ? fresh.length + (rider ? ' new delivery requests!' : ' new orders!') : (rider ? `Delivery request from ${o.name} · ${peso(o.total)}` : `New order from ${o.name} · ${peso(o.total)} · ${o.method}`);
+      toast(t + ' (tap to view)');
+      try { if(Notification.permission==='granted') new Notification(STORE, {body:t}); } catch(e){}
+      if(cur==='aOrders' || cur==='rDeliveries') (rider ? loadRider : loadAdminOrders)(); }
+  } catch(e){ if(/sign in again|session expired/i.test(e.message||'')){ store('sariA', null); location.reload(); } } }
+
+/* ----- Admin orders: last 7 days, search by name / mobile / order number ----- */
+const digits = s => String(s).replace(/\D/g, ''), idk = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+function loadAdminOrders(){
+  if(!$('oList')) $('aOrders').innerHTML = `<div class="row" style="justify-content:flex-start"><div class="sw" style="max-width:520px"><input id="oSearch" type="search" placeholder="Search name, mobile number or order number" aria-label="Search orders" oninput="oq=this.value;$('oSx').classList.toggle('hide',!oq);drawOrders()">
+    <button class="x hide" id="oSx" aria-label="Clear search" onclick="oq='';$('oSearch').value='';this.classList.add('hide');drawOrders()">×</button></div><button class="alt" onclick="resetOrders()">↻ Clear &amp; refresh</button></div>
+    <nav class="tabs" id="oTabs"></nav><p class="muted" id="oInfo"></p><div id="oList"></div>`;
+  run(async () => { [aData, riders] = await Promise.all([api('adminGetOrders', S.token), api('getRiders')]); drawOrders(); }); }
+function assignRider(id, btn){ run(async () => { await api('adminAssignRider', S.token, id, $('rs_' + id).value); await loadAdminOrders(); show('Rider assigned. They will see the request.', 'ok'); }, btn); }
+function resetOrders(){ oq = ''; aFilter = 'All'; const i = $('oSearch'); if(i) i.value = ''; $('oSx').classList.add('hide'); loadAdminOrders(); }
+function resetInv(){ aq = ''; loadAdminProducts(); }
+function drawOrders(){
+  const t = norm(oq).trim(), d = digits(oq), k = idk(oq);
+  const hit = o => norm(o.name).includes(t) || (d && digits(o.contact).includes(d)) || (k && idk(o.id).includes(k));
+  const c = s => aData.filter(o => o.status===s).length;
+  $('oTabs').innerHTML = ['Pending','Complete','Incomplete','All'].map(s =>
+    `<button class="tab ${!t && s===aFilter?'on':''}" onclick="aFilter='${s}';oq='';$('oSearch').value='';$('oSx').classList.add('hide');drawOrders()">${s} (${s==='All'?aData.length:c(s)})</button>`).join('');
+  const f = t ? aData.filter(hit) : (aFilter==='All' ? aData : aData.filter(o => o.status===aFilter));
+  $('oInfo').textContent = t ? `${f.length} match${f.length===1?'':'es'} for "${oq}" in the last 7 days (pending orders always shown)` : 'Showing the last 7 days · pending orders always shown';
+  $('oList').innerHTML = f.map(o => orderHtml(o, true)).join('') || '<p>No orders here.</p>'; }
+function review(id, btn){
+  const missing = [...document.querySelectorAll('#o_'+id+' input[type=checkbox]:checked')].map(c => c.value);
+  const note = $('n_'+id).value;
+  if(missing.length && !confirm('Mark this order as incomplete with ' + missing.length + ' missing item(s)?')) return;
+  run(async () => { const r = await api('adminReviewOrder', S.token, id, missing, note);
+    show(id + ' marked ' + r.status + '. ' + (r.emailed ? 'Customer was emailed. ' : '') + 'They will see it in Track order.', 'ok'); loadAdminOrders(); poll(); }, btn); }
+
+/* ----- Admin inventory (CRUD) ----- */
+const cats = () => [...new Set(adm.map(p => p.category).filter(Boolean))].sort();
+function loadAdminProducts(){
+  $('aProducts').innerHTML = `<div class="row" style="margin-bottom:10px"><div class="sw"><input id="aSearch" type="search" placeholder="Search inventory" aria-label="Search inventory" oninput="aq=this.value;$('aSx').classList.toggle('hide',!aq);drawAdm()"><button class="x hide" id="aSx" aria-label="Clear search" onclick="aq='';$('aSearch').value='';this.classList.add('hide');drawAdm()">×</button></div>
+    <button class="alt" onclick="resetInv()">↻ Clear &amp; refresh</button> <button class="go" onclick="editProd()">+ Add product</button></div><div class="card" id="admList"></div>`;
+  return run(async () => { adm = await api('adminGetProducts', S.token); drawAdm(); }); }
+function drawAdm(){
+  const terms = norm(aq).split(/\s+/).filter(Boolean);
+  const f = adm.filter(p => { const s = norm([p.name, p.category, ...p.tags].join(' ')); return terms.every(t => s.includes(t)); })
+    .sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+  $('admList').innerHTML = `<div class="prow head"><div>Product</div><div>Base price</div><div>Stock</div><div></div></div>` +
+    (f.map(p => `<div class="prow"><div style="display:flex;gap:10px;align-items:center"><div class="pimg thumb">${imgTag(p.image, 120)}</div><div><b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
+      <div>${peso(p.price)}</div><div class="${p.stock<=5?'miss':''}">${p.stock}</div>
+      <div class="acts"><button class="alt" onclick="editProd('${p.id}')">Edit</button>${S.role==='admin' ? `<button class="alt del" onclick="delProd('${p.id}')">Delete</button>` : ''}</div></div>`).join('')
+    || '<p>No products found.</p>') + `<p class="muted">${f.length} of ${adm.length} products · ${adm.filter(p => p.image).length} with images saved</p>`; }
+function editProd(id){
+  const p = adm.find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[]};
+  $('pdTitle').textContent = id ? 'Edit product' : 'Add product'; $('pErr').innerHTML = ''; $('pd').dataset.id = id || '';
+  img = p.image || ''; imgChanged = false; showPrev(); $('pFile').value = ''; $('pUp').textContent = '';
+  $('pName').value = p.name; $('pPrice').value = p.price; $('pStock').value = p.stock; $('tagIn').value = ''; tags = [...p.tags]; drawTags();
+  $('pCat').innerHTML = cats().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__new">+ New category…</option>';
+  $('pCat').value = p.category || (cats()[0] || '__new');
+  $('pNewCat').value = ''; $('pNewCat').classList.toggle('hide', $('pCat').value!=='__new');
+  $('pd').showModal(); $('pName').focus(); }
+function showPrev(){ $('pPrev').innerHTML = imgTag(img, 160); }
+function cutBg(ctx, w, h){ /* make the white background around the product transparent */
+  const d = ctx.getImageData(0,0,w,h), px = d.data, seen = new Uint8Array(w*h), st = [];
+  const near = i => px[i*4+3] < 10 || (px[i*4] > 232 && px[i*4+1] > 232 && px[i*4+2] > 232);
+  const push = i => { if(!seen[i] && near(i)){ seen[i] = 1; st.push(i); } };
+  for(let x=0;x<w;x++){ push(x); push((h-1)*w+x); } for(let y=0;y<h;y++){ push(y*w); push(y*w+w-1); }
+  while(st.length){ const i = st.pop(), x = i % w; px[i*4+3] = 0; if(x>0) push(i-1); if(x<w-1) push(i+1); if(i>=w) push(i-w); if(i<w*(h-1)) push(i+w); }
+  ctx.putImageData(d,0,0); }
+function pickImg(inp){ const f = inp.files[0]; if(!f) return; $('pUp').textContent = 'Processing image…'; $('pErr').innerHTML = '';
+  const im = new Image(); im.onload = async () => { const k = Math.min(1, 700 / Math.max(im.width, im.height)), w = Math.max(1, Math.round(im.width*k)), h = Math.max(1, Math.round(im.height*k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d'); ctx.drawImage(im, 0, 0, w, h);
+    if($('pClear').checked) cutBg(ctx, w, h);
+    try { $('pUp').textContent = 'Uploading to Cloudinary…'; img = await cldUpload(c.toDataURL('image/png')); imgChanged = true; showPrev();
+      $('pUp').textContent = 'Image uploaded. It is saved to the product when you press Save product.'; }
+    catch(e){ $('pUp').textContent = ''; $('pErr').innerHTML = '<div class="msg err">' + esc(e.message || e) + '</div>'; } };
+  im.onerror = () => { $('pUp').textContent = 'Could not read that image.'; }; im.src = URL.createObjectURL(f); }
+function drawTags(){ $('tagBox').innerHTML = tags.map((t,i) => `<span class="tg">${esc(t)}<button aria-label="Remove tag ${esc(t)}" onclick="tags.splice(${i},1);drawTags()">×</button></span>`).join(''); }
+function addTags(str){ String(str).split(',').map(t => t.trim().toLowerCase()).filter(t => t && !tags.includes(t)).forEach(t => tags.push(t)); drawTags(); }
+function tagKey(e){ const i = e.target;
+  if(e.key==='Enter' || e.key===','){ e.preventDefault(); addTags(i.value); i.value = ''; }
+  else if(e.key==='Backspace' && !i.value){ tags.pop(); drawTags(); } }
+function autoTags(){ if(!tags.length) addTags($('pName').value.replace(/[^\w\s]/g,' ').split(/\s+/).filter(w => w.length>2).join(',')); }
+async function saveProd(){
+  addTags($('tagIn').value); $('tagIn').value = '';
+  const sel = $('pCat').value, category = sel==='__new' ? $('pNewCat').value.trim() : sel;
+  const p = {id:$('pd').dataset.id, name:$('pName').value, category, price:parseFloat($('pPrice').value), stock:parseInt($('pStock').value,10), tags, image: imgChanged ? img : '__keep'};
+  $('pSave').disabled = true;
+  try { await api('adminSaveProduct', S.token, p); $('pd').close(); sessionStorage.removeItem('sariP');
+    await loadAdminProducts(); show('Saved ' + p.name + '.', 'ok');
+  } catch(e){ $('pErr').innerHTML = `<div class="msg err" role="alert">${esc(e.message || e)}</div>`; }
+  $('pSave').disabled = false; }
+function delProd(id){ const p = adm.find(x => x.id===id);
+  if(!confirm('Delete "' + p.name + '"? Past orders keep their item names.')) return;
+  run(async () => { await api('adminDeleteProduct', S.token, id); sessionStorage.removeItem('sariP'); await loadAdminProducts(); show('Deleted ' + p.name + '.', 'ok'); }); }
+
+/* ----- Staff management (owner) ----- */
+let staffList = [];
+async function loadStaff(){
+  $('aStaff').innerHTML = '<div class="row" style="margin-bottom:10px"><h2>Staff</h2><button class="go" onclick="editStaff()">+ Add staff</button></div><div class="card" id="stList"></div>';
+  return run(async () => { staffList = await api('adminListStaff', S.token); drawStaff(); }); }
+function drawStaff(){
+  $('stList').innerHTML = staffList.map(s => `<div class="prow" style="grid-template-columns:1fr auto"><div><b><span class="dot ${s.online?'live':'idle'}"></span>${esc(s.name)}</b>
+    <span class="muted"> · ${s.role==='delivery' ? 'Delivery rider' : 'Cashier'} · ${s.online ? 'Online' : 'Offline'}${s.active ? '' : ' · Disabled'}</span>
+    <div class="muted">${esc(s.email)} · ${esc(s.phone)}</div></div>
+    <div class="acts"><button class="alt" onclick="editStaff('${esc(s.email)}')">Edit</button><button class="alt del" onclick="delStaff('${esc(s.email)}')">Remove</button></div></div>`).join('')
+    || '<p>No staff yet. Add a cashier or a delivery rider.</p>'; }
+function editStaff(email){ const s = staffList.find(x => x.email===email) || {name:'', email:'', phone:'', role:'cashier', active:true};
+  $('sdTitle').textContent = email ? 'Edit staff' : 'Add staff'; $('sErr').innerHTML = ''; $('sd').dataset.edit = email || '';
+  $('sName').value = s.name; $('sEmail').value = s.email; $('sEmail').disabled = !!email; $('sPhone').value = s.phone; $('sRole').value = s.role;
+  $('sPass').value = ''; $('sPassNote').textContent = email ? '(leave blank to keep the current password)' : '(at least 6 characters)'; $('sActive').checked = s.active;
+  $('sd').showModal(); $('sName').focus(); }
+async function saveStaff(){ $('sSave').disabled = true;
+  try { await api('adminSaveStaff', S.token, {name:$('sName').value, email:$('sEmail').value, phone:$('sPhone').value, role:$('sRole').value, password:$('sPass').value, active:$('sActive').checked});
+    $('sd').close(); await loadStaff(); show('Staff saved.', 'ok');
+  } catch(e){ $('sErr').innerHTML = `<div class="msg err">${esc(e.message || e)}</div>`; }
+  $('sSave').disabled = false; }
+function delStaff(email){ if(!confirm('Remove ' + email + '? They will no longer be able to sign in.')) return;
+  run(async () => { await api('adminDeleteStaff', S.token, email); await loadStaff(); show('Staff removed.', 'ok'); }); }
+
+/* ----- Delivery rider screen ----- */
+function riderCard(o){
+  const act = o.deliveryStatus==='Requested' ? `<p class="row"><button class="go" onclick="respond('${o.id}','accept',this)">✓ Accept delivery</button><button class="alt del" onclick="respond('${o.id}','decline',this)">Decline</button></p>
+      <p class="muted">Agree on the delivery with the customer first (call or message), then accept.</p>`
+    : o.deliveryStatus==='Accepted' ? `<p><button class="go full" onclick="respond('${o.id}','delivered',this)">Mark as delivered</button></p>` : '';
+  return `<div class="card order"><div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.deliveryStatus}">${o.deliveryStatus}</span></div>
+    <div class="muted">${fmt(o.created)} · ${esc(o.name)}</div>${contactLinks(o.contact)}
+    <div>📍 ${esc(o.address)}</div>${o.note ? `<div class="muted">Customer note: ${esc(o.note)}</div>` : ''}
+    <ul>${o.items.map(i => `<li><span>${i.qty} × ${esc(i.name)}</span><span>${peso(i.qty*i.price)}</span></li>`).join('')}</ul>
+    <div class="row"><b>Total ${peso(o.total)}</b></div>${act}</div>`; }
+function loadRider(){ return run(async () => { const l = await api('riderOrders', S.token);
+  const sec = (t, f) => { const x = l.filter(o => f.includes(o.deliveryStatus)); return x.length ? `<h3 style="margin:14px 0 6px">${t} (${x.length})</h3>` + x.map(riderCard).join('') : ''; };
+  $('rDeliveries').innerHTML = sec('New requests', ['Requested']) + sec('On the way', ['Accepted']) + sec('Recent', ['Delivered', 'Declined']) || '<p>No deliveries yet. Customers who choose you as their rider will show up here.</p>'; }); }
+function respond(id, action, btn){ run(async () => { await api('riderRespond', S.token, id, action); await loadRider(); poll(); }, btn); }
+
+/* ----- Start ----- */
+api('getInfo').then(i => { ADDR = i.address; STORE = i.name; CLD = {cloud:i.cloud || '', preset:i.preset || ''};
+  if(i.emailCodes) $('codeLink').classList.remove('hide');
+  document.querySelectorAll('.stName').forEach(e => e.textContent = STORE); document.querySelectorAll('.stAddr').forEach(e => e.textContent = ADDR); toggleAddr(); }).catch(() => {});
+cart = load('sariC') || {};
+const saved = load('sariA');
+if(saved && saved.token){ S = saved; startAdmin(); }
+else { applySide(); loadShop(); updateCart(); custPoll(); setInterval(custPoll, 30000); }
+</script>
+</body>
+</html>

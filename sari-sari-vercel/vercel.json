@@ -1,0 +1,4 @@
+{
+  "outputDirectory": "public",
+  "functions": { "api/rpc.js": { "maxDuration": 15 } }
+}
