@@ -33,6 +33,10 @@ label{display:block;font-weight:600;margin:10px 0 4px}
 .msg{padding:10px 12px;border-radius:8px;margin:10px 0;font-weight:600}
 .msg.err{background:#fde5e2;color:#8a1f17}.msg.ok{background:#dff3e6;color:#1d5a37}
 .row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.dot.live{background:var(--leaf)}.dot.idle{background:#9aa7bd}
+.rider{border:2px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}.rider.sel{border-color:var(--blue);background:#eef4ff}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.lk{display:inline-block;padding:4px 10px;border-radius:99px;background:#e3ebf8;color:var(--blue);font-size:.82rem;font-weight:600;text-decoration:none}
+.Requested{background:#8a6d00}.Accepted{background:var(--blue)}.Delivered{background:var(--leaf)}.Declined{background:var(--chili)}
 .hide{display:none!important}
 /* fixed bottom navigation */
 .bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
@@ -52,11 +56,11 @@ input[type=search]::-webkit-search-cancel-button{display:none}
 .cat{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;color:var(--ink);text-align:left;padding:8px 10px;border-radius:8px;font-weight:500}
 .cat.on{background:var(--mango);font-weight:700}.cat small{opacity:.7}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px}
-.grid .card{display:flex;flex-direction:column;padding:10px}
+.grid .card{display:flex;flex-direction:column;padding:8px}
 .grid .card b{font-size:.95rem;line-height:1.2}.grid .muted{font-size:.74rem;line-height:1.3}
 .grid .ctl{margin-top:auto;padding-top:8px}
 .price{font-family:'Baloo 2',sans-serif;font-size:1.15rem;color:var(--blue)}
-.pimg{height:112px;display:flex;align-items:center;justify-content:center;background:#f4f8fd;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.pimg{height:84px;display:flex;align-items:center;justify-content:center;background:#f4f8fd;border-radius:8px;margin-bottom:8px;overflow:hidden}
 .pimg img{max-width:100%;max-height:100%;object-fit:contain}.pimg span{font-size:2.2rem;opacity:.3}
 .thumb{width:46px;height:46px;flex:none;margin:0}.thumb span{font-size:1.4rem}
 .tag{display:inline-block;font-size:.65rem;background:#e3ebf8;border-radius:6px;padding:0 5px;margin:3px 3px 0 0}
@@ -98,6 +102,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
 <script>window.addEventListener('error',function(e){var m=document.getElementById('msg');if(m)m.innerHTML='<div class="msg err">Page error: '+e.message+'. Please refresh.</div>';});</script>
 <header>
   <div style="flex:1"><h1 onclick="home()" class="stName">Jeriel Store</h1><div class="addr">📍 <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></div></div>
+  <span class="addr hide" id="who"></span>
   <button class="hd hide" id="out" onclick="signOut()">Sign out</button>
 </header>
 <main>
@@ -140,6 +145,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
       <p class="muted" id="pickAddr"></p>
       <div id="addrBox" class="hide"><label for="cAddr">Delivery address *</label>
         <textarea id="cAddr" rows="2" autocomplete="street-address" placeholder="House no., street, barangay, city"></textarea></div>
+      <div id="riderBox" class="hide"><label>Choose your delivery rider</label>
+        <p class="muted" id="riderHint"></p><div id="riders"></div></div>
       <label for="cNote">Note to the store (optional)</label><input id="cNote" maxlength="200">
       <p><button class="go full" id="place" onclick="checkout()">Place order</button></p>
     </div>
@@ -175,9 +182,10 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <!-- Admin sign-in -->
   <div id="login" class="v hide card narrow">
     <button class="alt" onclick="view('shop')">← Back to store</button>
-    <h2 style="margin-top:12px">Admin sign-in</h2>
-    <div id="stepEmail"><label for="lEmail">Admin email</label><input id="lEmail" type="email" autocomplete="email">
-      <p><button onclick="askCode()">Email me a code</button></p></div>
+    <h2 style="margin-top:12px">Staff sign-in</h2>
+    <div id="stepEmail"><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="email">
+      <div id="pwBox"><label for="lPw">Password</label><input id="lPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginPw()"></div>
+      <p><button id="codeBtn" onclick="loginPw()">Sign in</button> <button class="alt hide" id="codeLink" onclick="askCode()">Email me a code instead</button></p></div>
     <div id="stepCode" class="hide"><p class="muted">We sent a 6-digit code to <b id="sentTo"></b>.</p>
       <label for="lCode">Code</label><input id="lCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
       <p class="row"><button onclick="verify()">Sign in</button><button class="alt" onclick="askCode()">Send a new code</button></p></div>
@@ -186,6 +194,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <!-- Admin -->
   <div id="aOrders" class="v hide"></div>
   <div id="aProducts" class="v hide"></div>
+  <div id="aStaff" class="v hide"></div>
+  <div id="rDeliveries" class="v hide"></div>
   <p class="muted" style="text-align:center;margin-top:24px">📍 <span class="stName">Jeriel Store</span> · <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></p>
 </main>
 
@@ -193,7 +203,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <button data-v="shop" onclick="view('shop')"><b>🏪</b><span>Shop</span></button>
   <button data-v="track" onclick="view('track')"><b>📦</b><span id="trkLbl">Track order</span></button>
   <button data-v="cart" onclick="view('cart')"><b>🛒</b><span id="cartLbl">Cart (0)</span></button>
-  <button data-v="login" onclick="view('login')"><b>🔑</b><span>Admin</span></button>
+  <button data-v="login" onclick="view('login')"><b>🔑</b><span>Staff</span></button>
 </nav>
 <nav class="bn hide" id="bnA" aria-label="Admin menu">
   <button data-v="aOrders" onclick="view('aOrders')"><b>📋</b><span id="ordLbl">Orders</span></button>
@@ -223,18 +233,33 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <p class="row"><button class="alt" onclick="$('pd').close()">Cancel</button><button class="go" id="pSave" onclick="saveProd()">Save product</button></p>
 </dialog>
 
+<dialog id="sd" aria-labelledby="sdTitle">
+  <h2 id="sdTitle">Staff</h2><div id="sErr"></div>
+  <label for="sName">Name</label><input id="sName">
+  <label for="sEmail">Email (used to sign in)</label><input id="sEmail" type="email">
+  <label for="sPhone">Mobile number <span class="muted">(09XXXXXXXXX)</span></label><input id="sPhone" type="tel" inputmode="numeric" oninput="fmtPhone(this)">
+  <label for="sRole">Role</label>
+  <select id="sRole"><option value="cashier">Cashier – orders and inventory, cannot delete items</option><option value="delivery">Delivery rider – deliveries only</option></select>
+  <label for="sPass">Password <span class="muted" id="sPassNote">(at least 6 characters)</span></label><input id="sPass" type="text" autocomplete="off">
+  <label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" id="sActive" checked style="width:auto"> Active (can sign in)</label>
+  <p class="row"><button class="alt" onclick="$('sd').close()">Cancel</button><button class="go" id="sSave" onclick="saveStaff()">Save</button></p>
+</dialog>
 <script>
 let S = null, products = [], cart = {}, cat = 'All', q = '', lim = 40, tm, cur = 'shop', sideOpen = innerWidth > 700, unseen = 0;
-let CLD = {cloud:'', preset:''}, imgChanged = false, adm = [], aq = '', tags = [], img = '', aData = [], aFilter = 'Pending', oq = '', known = null, pollT, audioCtx;
+let riders = [], riderSel = '', CLD = {cloud:'', preset:''}, imgChanged = false, adm = [], aq = '', tags = [], img = '', aData = [], aFilter = 'Pending', oq = '', known = null, pollT, audioCtx;
 const $ = id => document.getElementById(id);
 let ADDR = '743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan', STORE = 'Jeriel Store';
 const peso = n => '₱' + Number(n).toLocaleString('en-PH');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const api = async (fn, ...a) => {
-  const r = await fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})});
-  const j = await r.json().catch(() => ({}));
-  if(!r.ok) throw new Error(j.error || 'Network problem. Please try again.');
+  let r;
+  try { r = await fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})}); }
+  catch(e){ throw new Error('Cannot reach the server. Check your internet connection.'); }
+  const j = await r.json().catch(() => null);
+  if(!r.ok) throw new Error(j && j.error ? j.error + (j.detail ? ' (' + j.detail + ')' : '') :
+    r.status === 404 ? 'Server function not found (HTTP 404). In Vercel, check the project Root Directory.' :
+    'Server error (HTTP ' + r.status + '). Open your-site/api/rpc to see what is wrong.');
   return j.result; };
 const fmt = d => new Date(d).toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'});
 const store = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
@@ -249,7 +274,7 @@ async function run(fn, btn){ if(btn) btn.disabled = true; show('');
     if(S && /sign in again|session expired/i.test(m)){ store('sariA', null); location.reload(); return; } show(m); }
   finally { if(btn) btn.disabled = false; } }
 function toast(t){ $('toast').textContent = '🔔 ' + t; $('toast').classList.remove('hide'); beep(); if(!S) setTimeout(() => $('toast').classList.add('hide'), 15000); }
-function toastGo(){ $('toast').classList.add('hide'); view(S ? 'aOrders' : 'track'); }
+function toastGo(){ $('toast').classList.add('hide'); view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 'track'); }
 function beep(){ try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
   [880, 1175].forEach((f, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + i*.25;
     o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t+.4); o.start(t); o.stop(t+.4); }); } catch(e){} }
@@ -271,11 +296,11 @@ async function cldUpload(dataUrl){
   return j.secure_url; }
 
 /* ----- Navigation ----- */
-function home(){ view(S ? 'aOrders' : 'shop'); }
+function home(){ view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 'shop'); }
 function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; applySide();
   document.querySelectorAll('.v').forEach(x => x.classList.toggle('hide', x.id!==v));
   document.querySelectorAll('.bn button').forEach(b => b.classList.toggle('on', b.dataset.v===v));
-  ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts})[v]?.();
+  ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts, aStaff:loadStaff, rDeliveries:loadRider})[v]?.();
   updateCart(); window.scrollTo(0,0); }
 
 /* ----- Shop: cached list + prebuilt search index, refreshed in background ----- */
@@ -307,8 +332,6 @@ function drawShop(){
   $('products').innerHTML = f.slice(0, lim).map(p => `<div class="card">${pimg(p)}
     <b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>
     <div class="price">${peso(p.price)}</div>
-    <div class="muted">${p.stock>0 ? p.stock+' in stock' : 'Out of stock'}</div>
-    <div>${(p.tags||[]).slice(0,3).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
     <div class="ctl" id="c_${p.id}">${ctl(p)}</div></div>`).join('')
     || '<p>No match. Try a shorter word like "noodles" or "soap".</p>';
   $('more').classList.toggle('hide', f.length <= lim);
@@ -338,27 +361,43 @@ function drawCartView(){
   $('co').classList.toggle('hide', !n); $('emptyBtn').classList.toggle('hide', !n);
   const c = lload('sariCust'); if(c && !$('cName').value){ $('cName').value = c.name||''; $('cPhone').value = c.contact||''; $('cEmail').value = c.email||''; $('cAddr').value = c.address||''; }
   toggleAddr(); updateCart(); }
-function toggleAddr(){ const d = $('cMethod').value==='Delivery'; $('addrBox').classList.toggle('hide', !d); $('pickAddr').textContent = d ? '' : '📍 ' + pickup(); }
+function toggleAddr(){ const d = $('cMethod').value==='Delivery'; $('addrBox').classList.toggle('hide', !d); $('riderBox').classList.toggle('hide', !d);
+  $('pickAddr').textContent = d ? '' : '📍 ' + pickup(); if(d) loadRiders(); }
+function contactLinks(phone){ const d = String(phone || '').replace(/\D/g, ''); if(!d) return ''; const intl = '63' + d.slice(1);
+  return `<span class="links"><a class="lk" href="tel:${d}">📞 Call</a><a class="lk" href="sms:${d}">💬 Text</a><a class="lk" href="viber://chat?number=%2B${intl}">Viber</a><a class="lk" href="https://wa.me/${intl}" target="_blank" rel="noopener">WhatsApp</a></span>`; }
+async function loadRiders(){ try { riders = await api('getRiders'); } catch(e){ riders = []; } drawRiders(); }
+function drawRiders(){ const on = riders.filter(r => r.online);
+  $('riderHint').textContent = !riders.length ? '' : on.length ? 'Call or message a rider to agree on the delivery, then choose them. They must accept before it is on the way.' : 'No riders are online right now. You can still place the order and the store will assign a rider.';
+  $('riders').innerHTML = riders.length ? riders.map(r => `<div class="rider ${riderSel===r.id?'sel':''}"><div><b><span class="dot ${r.online?'live':'idle'}"></span>${esc(r.name)}</b> <span class="muted">${r.online?'Online':'Offline'}</span></div>
+    ${contactLinks(r.phone)}<button class="${riderSel===r.id?'':'alt'} full" ${r.online?'':'disabled'} onclick="pickRider('${r.id}')">${riderSel===r.id?'✓ Selected':'Choose this rider'}</button></div>`).join('')
+    : '<p class="muted">No riders are set up yet. The store will arrange your delivery.</p>'; }
+function pickRider(id){ riderSel = riderSel===id ? '' : id; drawRiders(); }
+setInterval(() => { if(cur==='cart' && $('cMethod').value==='Delivery') loadRiders(); }, 20000);
 function checkout(){
+  const del = $('cMethod').value==='Delivery';
   const o = {name:$('cName').value, contact:$('cPhone').value, email:$('cEmail').value, method:$('cMethod').value, address:$('cAddr').value, note:$('cNote').value,
-    cart:Object.keys(cart).map(id => ({id, qty:cart[id]}))};
+    rider: del ? riderSel : '', cart:Object.keys(cart).map(id => ({id, qty:cart[id]}))};
   if(!/^09\d{9}$/.test(o.contact)) return show('Enter your mobile number as 09XXXXXXXXX (11 digits).');
+  if(del && !riderSel && riders.some(r => r.online)) return show('Please choose a delivery rider.');
+  const rname = (riders.find(r => r.id===riderSel) || {}).name;
   run(async () => { const r = await api('placeOrder', o);
-    lstore('sariCust', {name:o.name, contact:o.contact, email:o.email, address:o.address}); saveOrder(r.orderId, o.contact, 'Pending', Date.now());
-    cart = {}; store('sariC', cart); $('cNote').value = ''; sessionStorage.removeItem('sariP');
+    lstore('sariCust', {name:o.name, contact:o.contact, email:o.email, address:o.address}); saveOrder(r.orderId, o.contact, 'Pending', Date.now(), o.rider ? 'Requested' : '');
+    cart = {}; store('sariC', cart); $('cNote').value = ''; riderSel = ''; sessionStorage.removeItem('sariP');
     $('dId').textContent = r.orderId; $('dTotal').textContent = peso(r.total);
-    $('dAddr').textContent = o.method==='Pickup' ? '📍 ' + pickup() : 'We will deliver to: ' + o.address;
-    $('dMail').textContent = o.email.trim() ? 'A copy of your order was sent to ' + o.email.trim() + '.' : '';
+    $('dAddr').textContent = o.method==='Pickup' ? '📍 ' + pickup() : 'We will deliver to: ' + o.address + (rname ? '. ' + rname + ' must accept your delivery. You will be notified here.' : '. The store will assign a rider.');
+    $('dMail').textContent = o.email.trim() ? 'If email is set up for the store, a copy goes to ' + o.email.trim() + '.' : '';
     view('done'); }, $('place')); }
 
 /* ----- My orders (30 days), tracking and customer notifications ----- */
 const myOrders = () => (lload('sariOrders') || []).filter(o => Date.now() - o.t < 30*864e5);
-function saveOrder(id, contact, status, t){ const l = myOrders().filter(o => o.id!==id); l.unshift({id, contact, status, t}); lstore('sariOrders', l.slice(0, 40)); }
-function syncStatus(o, notify){ const l = lload('sariOrders') || [], m = l.find(x => x.id===o.id);
-  if(!m || m.status===o.status) return; m.status = o.status; lstore('sariOrders', l);
-  if(notify){ unseen++; badge(); toast(o.status==='Complete' ? `Your order ${o.id} is complete! ✅` : `Your order ${o.id} has missing items. Tap to see details.`); } }
+function saveOrder(id, contact, status, t, ds){ const l = myOrders().filter(o => o.id!==id); l.unshift({id, contact, status, t, ds:ds || ''}); lstore('sariOrders', l.slice(0, 40)); }
+function syncStatus(o, notify){ const l = lload('sariOrders') || [], m = l.find(x => x.id===o.id); if(!m) return; const msgs = [];
+  if(m.status !== o.status){ msgs.push(o.status==='Complete' ? `Your order ${o.id} is complete! ✅` : `Your order ${o.id} has missing items. Tap to see details.`); m.status = o.status; }
+  const ds = o.deliveryStatus || ''; if((m.ds || '') !== ds){ const nm = o.rider ? o.rider.name : 'Your rider';
+    const t = {Accepted:`${nm} accepted your delivery 🛵`, Declined:`${nm} can't take your delivery. The store will assign another rider.`, Delivered:`Your order ${o.id} was delivered ✅`}[ds]; if(t) msgs.push(t); m.ds = ds; }
+  lstore('sariOrders', l); if(notify && msgs.length){ unseen += msgs.length; badge(); toast(msgs[msgs.length-1]); } }
 function badge(){ $('trkLbl').textContent = 'Track order' + (unseen ? ` (${unseen})` : ''); }
-async function custPoll(){ if(S) return; const p = myOrders().filter(o => o.status==='Pending'); if(!p.length) return;
+async function custPoll(){ if(S) return; const p = myOrders().filter(o => o.status==='Pending' || o.ds==='Requested' || o.ds==='Accepted'); if(!p.length) return;
   try { (await api('trackMany', p.map(({id, contact}) => ({id, contact})))).forEach(o => syncStatus(o, true)); } catch(e){} }
 async function openTrack(){ unseen = 0; badge(); const l = myOrders();
   if(!l.length){ $('hist').innerHTML = '<p class="muted">No orders yet from this device. Use "Find an order" below if you ordered elsewhere.</p>'; $('histSum').textContent = ''; return; }
@@ -370,18 +409,29 @@ async function openTrack(){ unseen = 0; badge(); const l = myOrders();
 function doTrack(){
   if(!/^09\d{9}$/.test($('tPhone').value)) return show('Enter the mobile number as 09XXXXXXXXX (11 digits).');
   run(async () => { const o = await api('trackOrder', $('tId').value, $('tPhone').value);
-    saveOrder(o.id, $('tPhone').value, o.status, Date.parse(o.created) || Date.now());
+    saveOrder(o.id, $('tPhone').value, o.status, Date.parse(o.created) || Date.now(), o.deliveryStatus);
     $('tOut').innerHTML = orderHtml(o, false) + (o.status==='Pending' ? '<p class="muted">The store has not confirmed this order yet.</p>' : ''); openTrackQuiet(); }); }
 function openTrackQuiet(){ const l = myOrders(); api('trackMany', l.map(({id, contact}) => ({id, contact}))).then(r => {
   $('hist').innerHTML = r.map(o => orderHtml(o, false)).join(''); }).catch(() => {}); }
 
 /* ----- Order card (shared) ----- */
+function riderBlock(o, admin){
+  if(o.method !== 'Delivery') return '';
+  if(o.rider) return `<div class="muted">🛵 Rider: <b>${esc(o.rider.name)}</b> <span class="badge ${o.deliveryStatus}">${o.deliveryStatus}</span></div>${contactLinks(o.rider.phone)}` +
+    (!admin && o.deliveryStatus==='Declined' ? '<div class="muted">The rider declined. The store will assign another rider.</div>' : '');
+  if(admin && o.status==='Pending' || admin && o.deliveryStatus==='Declined') return '';
+  return '<div class="muted">🛵 Rider: not assigned yet</div>'; }
+function assignHtml(o){
+  if(o.method !== 'Delivery' || (o.rider && o.deliveryStatus !== 'Declined')) return '';
+  const opts = riders.map(r => `<option value="${r.id}">${esc(r.name)} ${r.online ? '(online)' : '(offline)'}</option>`).join('');
+  return riders.length ? `<p class="row" style="justify-content:flex-start"><select id="rs_${o.id}" style="max-width:260px">${opts}</select><button class="alt" onclick="assignRider('${o.id}', this)">Assign rider</button></p>` : '<div class="muted">No riders set up yet (Staff tab).</div>'; }
 function orderHtml(o, admin){
   const miss = o.missing.map(m => m.id);
   return `<div class="card order" id="o_${o.id}">
     <div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.status}">${o.status}</span></div>
     <div class="muted">${fmt(o.created)} · ${esc(o.method)}${admin ? ' · '+esc(o.name)+' · <a href="tel:'+esc(o.contact)+'">'+esc(o.contact)+'</a>'+(o.email?' · '+esc(o.email):'') : ''}</div>
     <div class="muted">${o.method==='Delivery' ? 'Deliver to: '+esc(o.address) : esc(pickup())}</div>
+    ${riderBlock(o, admin)}${admin ? assignHtml(o) : ''}
     ${o.note ? `<div class="muted">Customer note: ${esc(o.note)}</div>` : ''}
     <ul>${o.items.map(i => `<li>${admin && o.status==='Pending'
         ? `<label><input type="checkbox" value="${i.id}"> ${i.qty} × ${esc(i.name)} <span class="muted">(tick if missing)</span></label>`
@@ -396,26 +446,32 @@ function orderHtml(o, admin){
   </div>`;
 }
 
-/* ----- Admin sign-in ----- */
+/* ----- Staff sign-in, role menus, online status and alerts ----- */
 function askCode(){ const e = $('lEmail').value.trim();
   run(async () => { await api('sendCode', e); $('sentTo').textContent = e; $('stepEmail').classList.add('hide'); $('stepCode').classList.remove('hide');
     $('lCode').focus(); show('Code sent. Check your inbox (and spam).', 'ok'); }, event && event.target); }
 function verify(){ run(async () => { S = await api('verifyCode', $('lEmail').value, $('lCode').value); store('sariA', S); startAdmin(); }, event.target); }
+function loginPw(){ run(async () => { S = await api('loginPassword', $('lEmail').value, $('lPw').value); store('sariA', S); startAdmin(); }, $('codeBtn')); }
 async function signOut(){ try { await api('signOut', S.token); } catch(e){} store('sariA', null); location.reload(); }
-function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove('hide'); $('out').classList.remove('hide'); view('aOrders');
+const MENUS = {
+  admin: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory'], ['aStaff','👥','Staff']],
+  cashier: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory']],
+  delivery: [['rDeliveries','🛵','Deliveries']] };
+function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove('hide'); $('out').classList.remove('hide');
+  $('who').textContent = (S.name || 'Staff') + ' · ' + S.role + ' · 🟢 online'; $('who').classList.remove('hide');
+  $('bnA').innerHTML = (MENUS[S.role] || MENUS.cashier).map((m, i) => `<button data-v="${m[0]}" onclick="view('${m[0]}')"><b>${m[1]}</b><span ${i===0?'id="ordLbl"':''}>${m[2]}</span></button>`).join('');
+  view(S.role==='delivery' ? 'rDeliveries' : 'aOrders');
   try { Notification.requestPermission(); } catch(e){}
   poll(); pollT = setInterval(poll, 20000); }
-
-/* ----- Admin new-order alerts (checks every 20 seconds while this page is open) ----- */
-async function poll(){
-  try { const l = await api('adminPoll', S.token), ids = l.map(o => o.id);
+async function poll(){ /* also keeps this person marked online */
+  try { const rider = S.role==='delivery', l = await api(rider ? 'riderPoll' : 'adminPoll', S.token), ids = l.map(o => o.id);
     const fresh = known ? l.filter(o => !known.includes(o.id)) : []; known = ids;
-    $('ordLbl').textContent = ids.length ? `Orders (${ids.length} pending)` : 'Orders';
+    $('ordLbl').textContent = rider ? (ids.length ? `Deliveries (${ids.length} new)` : 'Deliveries') : (ids.length ? `Orders (${ids.length} pending)` : 'Orders');
     if(fresh.length){ const o = fresh[0];
-      const t = fresh.length>1 ? fresh.length + ' new orders!' : `New order from ${o.name} · ${peso(o.total)} · ${o.method}`;
+      const t = fresh.length>1 ? fresh.length + (rider ? ' new delivery requests!' : ' new orders!') : (rider ? `Delivery request from ${o.name} · ${peso(o.total)}` : `New order from ${o.name} · ${peso(o.total)} · ${o.method}`);
       toast(t + ' (tap to view)');
       try { if(Notification.permission==='granted') new Notification(STORE, {body:t}); } catch(e){}
-      if(cur==='aOrders') loadAdminOrders(); }
+      if(cur==='aOrders' || cur==='rDeliveries') (rider ? loadRider : loadAdminOrders)(); }
   } catch(e){ if(/sign in again|session expired/i.test(e.message||'')){ store('sariA', null); location.reload(); } } }
 
 /* ----- Admin orders: last 7 days, search by name / mobile / order number ----- */
@@ -424,7 +480,8 @@ function loadAdminOrders(){
   if(!$('oList')) $('aOrders').innerHTML = `<div class="row" style="justify-content:flex-start"><div class="sw" style="max-width:520px"><input id="oSearch" type="search" placeholder="Search name, mobile number or order number" aria-label="Search orders" oninput="oq=this.value;$('oSx').classList.toggle('hide',!oq);drawOrders()">
     <button class="x hide" id="oSx" aria-label="Clear search" onclick="oq='';$('oSearch').value='';this.classList.add('hide');drawOrders()">×</button></div><button class="alt" onclick="resetOrders()">↻ Clear &amp; refresh</button></div>
     <nav class="tabs" id="oTabs"></nav><p class="muted" id="oInfo"></p><div id="oList"></div>`;
-  run(async () => { aData = await api('adminGetOrders', S.token); drawOrders(); }); }
+  run(async () => { [aData, riders] = await Promise.all([api('adminGetOrders', S.token), api('getRiders')]); drawOrders(); }); }
+function assignRider(id, btn){ run(async () => { await api('adminAssignRider', S.token, id, $('rs_' + id).value); await loadAdminOrders(); show('Rider assigned. They will see the request.', 'ok'); }, btn); }
 function resetOrders(){ oq = ''; aFilter = 'All'; const i = $('oSearch'); if(i) i.value = ''; $('oSx').classList.add('hide'); loadAdminOrders(); }
 function resetInv(){ aq = ''; loadAdminProducts(); }
 function drawOrders(){
@@ -448,7 +505,7 @@ const cats = () => [...new Set(adm.map(p => p.category).filter(Boolean))].sort()
 function loadAdminProducts(){
   $('aProducts').innerHTML = `<div class="row" style="margin-bottom:10px"><div class="sw"><input id="aSearch" type="search" placeholder="Search inventory" aria-label="Search inventory" oninput="aq=this.value;$('aSx').classList.toggle('hide',!aq);drawAdm()"><button class="x hide" id="aSx" aria-label="Clear search" onclick="aq='';$('aSearch').value='';this.classList.add('hide');drawAdm()">×</button></div>
     <button class="alt" onclick="resetInv()">↻ Clear &amp; refresh</button> <button class="go" onclick="editProd()">+ Add product</button></div><div class="card" id="admList"></div>`;
-  run(async () => { adm = await api('adminGetProducts', S.token); drawAdm(); }); }
+  return run(async () => { adm = await api('adminGetProducts', S.token); drawAdm(); }); }
 function drawAdm(){
   const terms = norm(aq).split(/\s+/).filter(Boolean);
   const f = adm.filter(p => { const s = norm([p.name, p.category, ...p.tags].join(' ')); return terms.every(t => s.includes(t)); })
@@ -456,7 +513,7 @@ function drawAdm(){
   $('admList').innerHTML = `<div class="prow head"><div>Product</div><div>Base price</div><div>Stock</div><div></div></div>` +
     (f.map(p => `<div class="prow"><div style="display:flex;gap:10px;align-items:center"><div class="pimg thumb">${imgTag(p.image, 120)}</div><div><b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
       <div>${peso(p.price)}</div><div class="${p.stock<=5?'miss':''}">${p.stock}</div>
-      <div class="acts"><button class="alt" onclick="editProd('${p.id}')">Edit</button><button class="alt del" onclick="delProd('${p.id}')">Delete</button></div></div>`).join('')
+      <div class="acts"><button class="alt" onclick="editProd('${p.id}')">Edit</button>${S.role==='admin' ? `<button class="alt del" onclick="delProd('${p.id}')">Delete</button>` : ''}</div></div>`).join('')
     || '<p>No products found.</p>') + `<p class="muted">${f.length} of ${adm.length} products · ${adm.filter(p => p.image).length} with images saved</p>`; }
 function editProd(id){
   const p = adm.find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[]};
@@ -495,15 +552,55 @@ async function saveProd(){
   const p = {id:$('pd').dataset.id, name:$('pName').value, category, price:parseFloat($('pPrice').value), stock:parseInt($('pStock').value,10), tags, image: imgChanged ? img : '__keep'};
   $('pSave').disabled = true;
   try { await api('adminSaveProduct', S.token, p); $('pd').close(); sessionStorage.removeItem('sariP');
-    show('Saved ' + p.name + '.', 'ok'); loadAdminProducts();
+    await loadAdminProducts(); show('Saved ' + p.name + '.', 'ok');
   } catch(e){ $('pErr').innerHTML = `<div class="msg err" role="alert">${esc(e.message || e)}</div>`; }
   $('pSave').disabled = false; }
 function delProd(id){ const p = adm.find(x => x.id===id);
   if(!confirm('Delete "' + p.name + '"? Past orders keep their item names.')) return;
-  run(async () => { await api('adminDeleteProduct', S.token, id); sessionStorage.removeItem('sariP'); show('Deleted.', 'ok'); loadAdminProducts(); }); }
+  run(async () => { await api('adminDeleteProduct', S.token, id); sessionStorage.removeItem('sariP'); await loadAdminProducts(); show('Deleted ' + p.name + '.', 'ok'); }); }
+
+/* ----- Staff management (owner) ----- */
+let staffList = [];
+async function loadStaff(){
+  $('aStaff').innerHTML = '<div class="row" style="margin-bottom:10px"><h2>Staff</h2><button class="go" onclick="editStaff()">+ Add staff</button></div><div class="card" id="stList"></div>';
+  return run(async () => { staffList = await api('adminListStaff', S.token); drawStaff(); }); }
+function drawStaff(){
+  $('stList').innerHTML = staffList.map(s => `<div class="prow" style="grid-template-columns:1fr auto"><div><b><span class="dot ${s.online?'live':'idle'}"></span>${esc(s.name)}</b>
+    <span class="muted"> · ${s.role==='delivery' ? 'Delivery rider' : 'Cashier'} · ${s.online ? 'Online' : 'Offline'}${s.active ? '' : ' · Disabled'}</span>
+    <div class="muted">${esc(s.email)} · ${esc(s.phone)}</div></div>
+    <div class="acts"><button class="alt" onclick="editStaff('${esc(s.email)}')">Edit</button><button class="alt del" onclick="delStaff('${esc(s.email)}')">Remove</button></div></div>`).join('')
+    || '<p>No staff yet. Add a cashier or a delivery rider.</p>'; }
+function editStaff(email){ const s = staffList.find(x => x.email===email) || {name:'', email:'', phone:'', role:'cashier', active:true};
+  $('sdTitle').textContent = email ? 'Edit staff' : 'Add staff'; $('sErr').innerHTML = ''; $('sd').dataset.edit = email || '';
+  $('sName').value = s.name; $('sEmail').value = s.email; $('sEmail').disabled = !!email; $('sPhone').value = s.phone; $('sRole').value = s.role;
+  $('sPass').value = ''; $('sPassNote').textContent = email ? '(leave blank to keep the current password)' : '(at least 6 characters)'; $('sActive').checked = s.active;
+  $('sd').showModal(); $('sName').focus(); }
+async function saveStaff(){ $('sSave').disabled = true;
+  try { await api('adminSaveStaff', S.token, {name:$('sName').value, email:$('sEmail').value, phone:$('sPhone').value, role:$('sRole').value, password:$('sPass').value, active:$('sActive').checked});
+    $('sd').close(); await loadStaff(); show('Staff saved.', 'ok');
+  } catch(e){ $('sErr').innerHTML = `<div class="msg err">${esc(e.message || e)}</div>`; }
+  $('sSave').disabled = false; }
+function delStaff(email){ if(!confirm('Remove ' + email + '? They will no longer be able to sign in.')) return;
+  run(async () => { await api('adminDeleteStaff', S.token, email); await loadStaff(); show('Staff removed.', 'ok'); }); }
+
+/* ----- Delivery rider screen ----- */
+function riderCard(o){
+  const act = o.deliveryStatus==='Requested' ? `<p class="row"><button class="go" onclick="respond('${o.id}','accept',this)">✓ Accept delivery</button><button class="alt del" onclick="respond('${o.id}','decline',this)">Decline</button></p>
+      <p class="muted">Agree on the delivery with the customer first (call or message), then accept.</p>`
+    : o.deliveryStatus==='Accepted' ? `<p><button class="go full" onclick="respond('${o.id}','delivered',this)">Mark as delivered</button></p>` : '';
+  return `<div class="card order"><div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.deliveryStatus}">${o.deliveryStatus}</span></div>
+    <div class="muted">${fmt(o.created)} · ${esc(o.name)}</div>${contactLinks(o.contact)}
+    <div>📍 ${esc(o.address)}</div>${o.note ? `<div class="muted">Customer note: ${esc(o.note)}</div>` : ''}
+    <ul>${o.items.map(i => `<li><span>${i.qty} × ${esc(i.name)}</span><span>${peso(i.qty*i.price)}</span></li>`).join('')}</ul>
+    <div class="row"><b>Total ${peso(o.total)}</b></div>${act}</div>`; }
+function loadRider(){ return run(async () => { const l = await api('riderOrders', S.token);
+  const sec = (t, f) => { const x = l.filter(o => f.includes(o.deliveryStatus)); return x.length ? `<h3 style="margin:14px 0 6px">${t} (${x.length})</h3>` + x.map(riderCard).join('') : ''; };
+  $('rDeliveries').innerHTML = sec('New requests', ['Requested']) + sec('On the way', ['Accepted']) + sec('Recent', ['Delivered', 'Declined']) || '<p>No deliveries yet. Customers who choose you as their rider will show up here.</p>'; }); }
+function respond(id, action, btn){ run(async () => { await api('riderRespond', S.token, id, action); await loadRider(); poll(); }, btn); }
 
 /* ----- Start ----- */
 api('getInfo').then(i => { ADDR = i.address; STORE = i.name; CLD = {cloud:i.cloud || '', preset:i.preset || ''};
+  if(i.emailCodes) $('codeLink').classList.remove('hide');
   document.querySelectorAll('.stName').forEach(e => e.textContent = STORE); document.querySelectorAll('.stAddr').forEach(e => e.textContent = ADDR); toggleAddr(); }).catch(() => {});
 cart = load('sariC') || {};
 const saved = load('sariA');
