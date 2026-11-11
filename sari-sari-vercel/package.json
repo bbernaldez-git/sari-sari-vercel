@@ -1,7 +1,11 @@
 {
-  "name": "sari-sari-store",
+  "name": "my-vercel-app",
   "version": "1.0.0",
-  "private": true,
-  "engines": { "node": "20.x" },
-  "dependencies": { "csv-parse": "^5.5.6", "nodemailer": "^6.9.14", "pg": "^8.12.0" }
+  "engines": {
+    "node": "26.x"
+  },
+  "dependencies": {
+    "pg": "^8.11.0",
+    "csv-parse": "^5.5.0"
+  }
 }
