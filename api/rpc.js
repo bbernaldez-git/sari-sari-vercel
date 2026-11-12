@@ -157,7 +157,8 @@ async function getInfo() {
 }---------- */
 async function getProducts() {
   const { rows } = await q('select * from products order by name');
-  // Ensure rows is always an array before mapping
+  console.log("Raw DB rows fetched:", rows); // <-- Add this line
+  
   const safeRows = rows || [];
   return safeRows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
 }
