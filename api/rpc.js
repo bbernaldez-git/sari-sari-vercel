@@ -32,6 +32,13 @@ class E extends Error {}
 
 /* ---------- Email (optional): Resend or Gmail; skipped silently if neither is set ---------- */
 async function mail(to, subject, text) {
+  if (process.env.BREVO_API_KEY && process.env.MAIL_FROM) {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST',
+      headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ sender: { name: STORE_NAME, email: process.env.MAIL_FROM }, to: [{ email: to }], subject, textContent: text }) });
+    if (!res.ok) throw new Error('Brevo: ' + (await res.text()));
+    return;
+  }
   if (process.env.RESEND_API_KEY) {
     const res = await fetch('https://api.resend.com/emails', { method: 'POST',
       headers: { Authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
@@ -44,7 +51,14 @@ async function mail(to, subject, text) {
   await t.sendMail({ from: `${STORE_NAME} <${process.env.GMAIL_USER}>`, to, subject, text });
 }
 const tryMail = async (...a) => { try { await mail(...a); return true; } catch (e) { console.error('mail', e.message); return false; } };
-const emailOn = () => !!(process.env.RESEND_API_KEY || process.env.GMAIL_USER);
+const emailOn = () => !!((process.env.BREVO_API_KEY && process.env.MAIL_FROM) || process.env.RESEND_API_KEY || process.env.GMAIL_USER);
+/* New-order style alerts go to the owner(s) and every cashier who is currently signed in. */
+async function notifyStore(subject, text) {
+  if (!emailOn()) return [];
+  const { rows } = await q("select distinct s.email from staff s join sessions x on x.email=s.email where s.role='cashier' and s.active and x.expires>$1", [Date.now()]);
+  const to = [...new Set([...ADMIN_EMAILS, ...rows.map(r => r.email)])];
+  return Promise.all(to.map(a => tryMail(a, subject, text)));
+}
 
 /* ---------- Helpers ---------- */
 function normPhone(s) {
@@ -181,7 +195,8 @@ async function placeOrder(o) {
     await client.query('commit');
   } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
   if (emailOn()) {
-    const mails = ADMIN_EMAILS.map(a => tryMail(a, 'New order ' + orderId, `${name} (${contact}) - ${method} - PHP ${total}`));
+    const mails = [notifyStore('New order ' + orderId, `${name} (${contact}) - ${method} - PHP ${total}\n\n` +
+      items.map(i => `- ${i.qty} x ${i.name}`).join('\n') + (method === 'Delivery' ? `\n\nDeliver to: ${address}` : '\n\nStore pickup'))];
     if (email) mails.push(tryMail(email, `Your order ${orderId} - ${STORE_NAME}`, `Hi ${name},\n\nThank you for your order!\nOrder ID: ${orderId}\n\n` +
       items.map(i => `- ${i.qty} x ${i.name} @ PHP ${i.price} = PHP ${i.qty * i.price}`).join('\n') +
       `\n\nTotal: PHP ${total}\n${method === 'Pickup' ? 'Pick up at: ' + STORE_NAME + ' ' + STORE_ADDRESS : 'Delivery to: ' + address}\n\nWe will email you once the store confirms your order.`));
@@ -325,20 +340,65 @@ async function riderRespond(token, orderId, action) {
   const step = { accept: ['Requested', 'Accepted'], decline: ['Requested', 'Declined'], delivered: ['Accepted', 'Delivered'] }[action];
   if (!step || o.delivery_status !== step[0]) throw new E('This delivery cannot be changed right now.');
   await q('update orders set delivery_status=$1 where id=$2', [step[1], orderId]);
+  if (emailOn()) {
+    const rn = a.staff.name;
+    if (o.email) {
+      const msg = { Accepted: `${rn} accepted your delivery and will bring your order soon.`, Declined: `${rn} is not able to take your delivery. The store will assign another rider.`,
+        Delivered: 'Your order was delivered. Thank you for shopping with us!' }[step[1]];
+      await tryMail(o.email, `Order ${orderId}: delivery ${step[1].toLowerCase()}`, `Hi ${o.name},\n\n${msg}\n\nOrder ID: ${orderId}`);
+    }
+    if (step[1] === 'Declined') await notifyStore(`Rider declined order ${orderId}`, `${rn} declined the delivery for ${o.name}. Please assign another rider.`);
+  }
   return { deliveryStatus: step[1] };
+}
+
+/* ---------- Email test, reports and data cleanup (owner only) ---------- */
+async function adminTestEmail(token) {
+  const a = await auth(token, ['admin']);
+  if (!emailOn()) throw new E('Email is not set up yet. Add BREVO_API_KEY and MAIL_FROM in Vercel, then redeploy.');
+  try { await mail(a.email, 'Test email from ' + STORE_NAME, 'Email is working. New order alerts will arrive here.'); }
+  catch (e) { throw new E('Email failed: ' + String(e.message).slice(0, 220)); }
+  return { sentTo: a.email };
+}
+async function adminReport(token, from, to) {
+  await auth(token, ['admin']);
+  const ok = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+  const f = ok(from) ? new Date(from + 'T00:00:00+08:00') : new Date('2000-01-01T00:00:00Z');
+  const t = ok(to) ? new Date(new Date(to + 'T00:00:00+08:00').getTime() + 86400000) : new Date(Date.now() + 86400000);
+  const { rows } = await q('select * from orders where created >= $1 and created < $2 order by created limit 5000', [f, t]);
+  const rm = await riderMap(); return rows.map(o => orderOut(o, rm));
+}
+async function adminStorage(token) {
+  await auth(token, ['admin']);
+  const old = await q("select count(*)::int n, min(created) oldest from orders where created < now() - interval '60 days' and status <> 'Pending'");
+  const tot = await q('select count(*)::int n from orders');
+  const sz = await q('select pg_database_size(current_database())::bigint b');
+  return { oldCount: old.rows[0].n, oldest: old.rows[0].oldest, totalOrders: tot.rows[0].n, sizeMb: Math.round(Number(sz.rows[0].b) / 104857.6) / 10 };
+}
+async function adminPurgeOld(token) {
+  await auth(token, ['admin']);
+  const r = await q("delete from orders where created < now() - interval '60 days' and status <> 'Pending'");
+  await q('delete from sessions where expires < $1', [Date.now()]); await q('delete from admin_codes where expires < $1', [Date.now()]);
+  await q('vacuum orders').catch(() => {});
+  return { deleted: r.rowCount };
 }
 
 const fns = { getInfo, getProducts, getRiders, placeOrder, trackOrder, trackMany, sendCode, verifyCode, loginPassword, signOut,
   adminGetOrders, adminPoll, adminReviewOrder, adminAssignRider, adminGetProducts, adminSaveProduct, adminDeleteProduct,
-  adminListStaff, adminSaveStaff, adminDeleteStaff, riderOrders, riderPoll, riderRespond };
+  adminListStaff, adminSaveStaff, adminDeleteStaff, riderOrders, riderPoll, riderRespond,
+  adminTestEmail, adminReport, adminStorage, adminPurgeOld };
 
 module.exports = async (req, res) => {
   try {
+    if (req.method === 'GET' && new URL(req.url, 'http://x').searchParams.get('fn') === 'getProducts') { // cached at the edge to save database use
+      await init(); res.setHeader('Cache-Control', 'public, s-maxage=20, stale-while-revalidate=120');
+      return res.status(200).json({ result: await getProducts() });
+    }
     if (req.method === 'GET') { // open /api/rpc in your browser to check the setup
       let db = 'ok'; try { await init(); await q('select 1'); } catch (e) { db = String(e.message).slice(0, 160); }
       return res.status(200).json({ ok: db === 'ok', database: db, settings: {
         DATABASE_URL: !!(process.env.DATABASE_URL || process.env.POSTGRES_URL), ADMIN_EMAILS: ADMIN_EMAILS.length,
-        ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD, CLOUDINARY: !!(process.env.CLOUDINARY_CLOUD && process.env.CLOUDINARY_PRESET), email: emailOn() } });
+        ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD, CLOUDINARY: !!(process.env.CLOUDINARY_CLOUD && process.env.CLOUDINARY_PRESET), email: process.env.BREVO_API_KEY && process.env.MAIL_FROM ? 'brevo' : process.env.RESEND_API_KEY ? 'resend' : process.env.GMAIL_USER ? 'gmail' : 'not set up' } });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
     const { fn, args } = req.body || {};
