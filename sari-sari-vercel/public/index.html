@@ -308,7 +308,10 @@ function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; app
 /* -----function prep(l){ products = l.map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
   .sort((a,b) => (b.stock>0)-(a.stock>0) || a.name.localeCompare(b.name)); }----- */
 function prep(l){ 
-  products = (l || []).map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
+  // Ensure 'l' is actually an array before mapping; if not, use an empty array []
+  const items = Array.isArray(l) ? l : [];
+  
+  products = items.map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
     .sort((a,b) => (b.stock>0)-(a.stock>0) || a.name.localeCompare(b.name)); 
 }
 function loadShop(){
