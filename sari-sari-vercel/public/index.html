@@ -195,6 +195,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <div id="aOrders" class="v hide"></div>
   <div id="aProducts" class="v hide"></div>
   <div id="aStaff" class="v hide"></div>
+  <div id="aReports" class="v hide"></div>
   <div id="rDeliveries" class="v hide"></div>
   <p class="muted" style="text-align:center;margin-top:24px">📍 <span class="stName">Jeriel Store</span> · <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></p>
 </main>
@@ -254,7 +255,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp
 const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const api = async (fn, ...a) => {
   let r;
-  try { r = await fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})}); }
+  try { r = fn === 'getProducts' ? await fetch('/api/rpc?fn=getProducts') : await fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})}); }
   catch(e){ throw new Error('Cannot reach the server. Check your internet connection.'); }
   const j = await r.json().catch(() => null);
   if(!r.ok) throw new Error(j && j.error ? j.error + (j.detail ? ' (' + j.detail + ')' : '') :
@@ -281,14 +282,14 @@ function beep(){ try { audioCtx = audioCtx || new (window.AudioContext || window
 
 /* ----- Product images (Cloudinary) ----- */
 const SL = '/' + '/';
-function cld(u, w){ const m = '/upload/', i = u.indexOf(m); return i < 0 ? u : u.slice(0, i + m.length) + 'c_fit,w_' + w + ',h_' + w + ',f_auto,q_auto/' + u.slice(i + m.length); }
-function imgTag(u, w){ return u ? '<img src="' + esc(cld(u, w || 320)) + '" data-raw="' + esc(u) + '" alt="" loading="lazy" onerror="imgFail(this)">' : '<span>🛒</span>'; }
+function cld(u, w){ const m = '/upload/', i = u.indexOf(m); return i < 0 ? u : u.slice(0, i + m.length) + 'c_fit,w_' + w + ',h_' + w + ',f_auto,q_auto:eco/' + u.slice(i + m.length); }
+function imgTag(u, w){ return u ? '<img src="' + esc(cld(u, w || 180)) + '" data-raw="' + esc(u) + '" alt="" loading="lazy" decoding="async" onerror="imgFail(this)">' : '<span>🛒</span>'; }
 function imgFail(el){ if(el.dataset.raw && !el.dataset.tried){ el.dataset.tried = '1'; el.src = el.dataset.raw; return; }
   if(el.closest('#pPrev')) $('pUp').textContent = 'The preview could not load this image link. Check it exists in your Cloudinary Media Library.';
   el.replaceWith(Object.assign(document.createElement('span'), {textContent:'🛒'})); }
-const pimg = p => '<div class="pimg">' + imgTag(p.image, 320) + '</div>';
+const pimg = p => '<div class="pimg">' + imgTag(p.image, 180) + '</div>';
 async function cldUpload(dataUrl){
-  if(!CLD.cloud || !CLD.preset || CLD.cloud.indexOf('your-') === 0) throw new Error('Cloudinary is not set up yet. Put your cloud name and upload preset in Code.gs, then redeploy.');
+  if(!CLD.cloud || !CLD.preset || CLD.cloud.indexOf('your-') === 0) throw new Error('Cloudinary is not set up yet. In Vercel, add CLOUDINARY_CLOUD and CLOUDINARY_PRESET under Settings > Environment Variables, then redeploy.');
   const fd = new FormData(); fd.append('file', dataUrl); fd.append('upload_preset', CLD.preset);
   const r = await fetch('https:' + SL + 'api.cloudinary.com/v1_1/' + CLD.cloud + '/image/upload', {method:'POST', body:fd});
   const j = await r.json().catch(() => ({}));
@@ -300,7 +301,7 @@ function home(){ view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 's
 function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; applySide();
   document.querySelectorAll('.v').forEach(x => x.classList.toggle('hide', x.id!==v));
   document.querySelectorAll('.bn button').forEach(b => b.classList.toggle('on', b.dataset.v===v));
-  ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts, aStaff:loadStaff, rDeliveries:loadRider})[v]?.();
+  ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts, aStaff:loadStaff, aReports:loadReports, rDeliveries:loadRider})[v]?.();
   updateCart(); window.scrollTo(0,0); }
 
 /* ----- Shop: cached list + prebuilt search index, refreshed in background ----- */
@@ -364,10 +365,10 @@ function drawCartView(){
 function toggleAddr(){ const d = $('cMethod').value==='Delivery'; $('addrBox').classList.toggle('hide', !d); $('riderBox').classList.toggle('hide', !d);
   $('pickAddr').textContent = d ? '' : '📍 ' + pickup(); if(d) loadRiders(); }
 function contactLinks(phone){ const d = String(phone || '').replace(/\D/g, ''); if(!d) return ''; const intl = '63' + d.slice(1);
-  return `<span class="links"><a class="lk" href="tel:${d}">📞 Call</a><a class="lk" href="sms:${d}">💬 Text</a><a class="lk" href="viber://chat?number=%2B${intl}">Viber</a><a class="lk" href="https://wa.me/${intl}" target="_blank" rel="noopener">WhatsApp</a></span>`; }
+  return `<span class="links"><a class="lk" href="tel:${d}">📞 Call</a><a class="lk" href="viber://chat?number=%2B${intl}">💬 Viber</a><a class="lk" href="https://t.me/+${intl}" target="_blank" rel="noopener">✈ Telegram</a><a class="lk" href="https://wa.me/${intl}" target="_blank" rel="noopener">WhatsApp</a><a class="lk" href="sms:${d}">Text</a></span>`; }
 async function loadRiders(){ try { riders = await api('getRiders'); } catch(e){ riders = []; } drawRiders(); }
 function drawRiders(){ const on = riders.filter(r => r.online);
-  $('riderHint').textContent = !riders.length ? '' : on.length ? 'Call or message a rider to agree on the delivery, then choose them. They must accept before it is on the way.' : 'No riders are online right now. You can still place the order and the store will assign a rider.';
+  $('riderHint').textContent = !riders.length ? '' : on.length ? 'Tap Call, Viber or Telegram to agree on the delivery with a rider, then choose them. They must accept before it is on the way.' : 'No riders are online right now. You can still place the order and the store will assign a rider.';
   $('riders').innerHTML = riders.length ? riders.map(r => `<div class="rider ${riderSel===r.id?'sel':''}"><div><b><span class="dot ${r.online?'live':'idle'}"></span>${esc(r.name)}</b> <span class="muted">${r.online?'Online':'Offline'}</span></div>
     ${contactLinks(r.phone)}<button class="${riderSel===r.id?'':'alt'} full" ${r.online?'':'disabled'} onclick="pickRider('${r.id}')">${riderSel===r.id?'✓ Selected':'Choose this rider'}</button></div>`).join('')
     : '<p class="muted">No riders are set up yet. The store will arrange your delivery.</p>'; }
@@ -454,7 +455,7 @@ function verify(){ run(async () => { S = await api('verifyCode', $('lEmail').val
 function loginPw(){ run(async () => { S = await api('loginPassword', $('lEmail').value, $('lPw').value); store('sariA', S); startAdmin(); }, $('codeBtn')); }
 async function signOut(){ try { await api('signOut', S.token); } catch(e){} store('sariA', null); location.reload(); }
 const MENUS = {
-  admin: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory'], ['aStaff','👥','Staff']],
+  admin: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory'], ['aReports','📊','Reports'], ['aStaff','👥','Staff']],
   cashier: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory']],
   delivery: [['rDeliveries','🛵','Deliveries']] };
 function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove('hide'); $('out').classList.remove('hide');
@@ -511,7 +512,7 @@ function drawAdm(){
   const f = adm.filter(p => { const s = norm([p.name, p.category, ...p.tags].join(' ')); return terms.every(t => s.includes(t)); })
     .sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
   $('admList').innerHTML = `<div class="prow head"><div>Product</div><div>Base price</div><div>Stock</div><div></div></div>` +
-    (f.map(p => `<div class="prow"><div style="display:flex;gap:10px;align-items:center"><div class="pimg thumb">${imgTag(p.image, 120)}</div><div><b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
+    (f.map(p => `<div class="prow"><div style="display:flex;gap:10px;align-items:center"><div class="pimg thumb">${imgTag(p.image, 90)}</div><div><b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
       <div>${peso(p.price)}</div><div class="${p.stock<=5?'miss':''}">${p.stock}</div>
       <div class="acts"><button class="alt" onclick="editProd('${p.id}')">Edit</button>${S.role==='admin' ? `<button class="alt del" onclick="delProd('${p.id}')">Delete</button>` : ''}</div></div>`).join('')
     || '<p>No products found.</p>') + `<p class="muted">${f.length} of ${adm.length} products · ${adm.filter(p => p.image).length} with images saved</p>`; }
@@ -524,7 +525,7 @@ function editProd(id){
   $('pCat').value = p.category || (cats()[0] || '__new');
   $('pNewCat').value = ''; $('pNewCat').classList.toggle('hide', $('pCat').value!=='__new');
   $('pd').showModal(); $('pName').focus(); }
-function showPrev(){ $('pPrev').innerHTML = imgTag(img, 160); }
+function showPrev(){ $('pPrev').innerHTML = imgTag(img, 120); }
 function cutBg(ctx, w, h){ /* make the white background around the product transparent */
   const d = ctx.getImageData(0,0,w,h), px = d.data, seen = new Uint8Array(w*h), st = [];
   const near = i => px[i*4+3] < 10 || (px[i*4] > 232 && px[i*4+1] > 232 && px[i*4+2] > 232);
@@ -533,10 +534,10 @@ function cutBg(ctx, w, h){ /* make the white background around the product trans
   while(st.length){ const i = st.pop(), x = i % w; px[i*4+3] = 0; if(x>0) push(i-1); if(x<w-1) push(i+1); if(i>=w) push(i-w); if(i<w*(h-1)) push(i+w); }
   ctx.putImageData(d,0,0); }
 function pickImg(inp){ const f = inp.files[0]; if(!f) return; $('pUp').textContent = 'Processing image…'; $('pErr').innerHTML = '';
-  const im = new Image(); im.onload = async () => { const k = Math.min(1, 700 / Math.max(im.width, im.height)), w = Math.max(1, Math.round(im.width*k)), h = Math.max(1, Math.round(im.height*k));
+  const im = new Image(); im.onload = async () => { const k = Math.min(1, 500 / Math.max(im.width, im.height)), w = Math.max(1, Math.round(im.width*k)), h = Math.max(1, Math.round(im.height*k));
     const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d'); ctx.drawImage(im, 0, 0, w, h);
     if($('pClear').checked) cutBg(ctx, w, h);
-    try { $('pUp').textContent = 'Uploading to Cloudinary…'; img = await cldUpload(c.toDataURL('image/png')); imgChanged = true; showPrev();
+    try { $('pUp').textContent = 'Uploading to Cloudinary…'; const blob = await new Promise(ok => c.toBlob(b2 => b2 && b2.type === 'image/webp' ? ok(b2) : c.toBlob(ok, 'image/png'), 'image/webp', 0.85)); img = await cldUpload(blob); imgChanged = true; showPrev();
       $('pUp').textContent = 'Image uploaded. It is saved to the product when you press Save product.'; }
     catch(e){ $('pUp').textContent = ''; $('pErr').innerHTML = '<div class="msg err">' + esc(e.message || e) + '</div>'; } };
   im.onerror = () => { $('pUp').textContent = 'Could not read that image.'; }; im.src = URL.createObjectURL(f); }
@@ -562,8 +563,9 @@ function delProd(id){ const p = adm.find(x => x.id===id);
 /* ----- Staff management (owner) ----- */
 let staffList = [];
 async function loadStaff(){
-  $('aStaff').innerHTML = '<div class="row" style="margin-bottom:10px"><h2>Staff</h2><button class="go" onclick="editStaff()">+ Add staff</button></div><div class="card" id="stList"></div>';
+  $('aStaff').innerHTML = '<div class="row" style="margin-bottom:10px"><h2>Staff</h2><span><button class="alt" onclick="testEmail(this)">✉ Send test email</button> <button class="go" onclick="editStaff()">+ Add staff</button></span></div><div class="card" id="stList"></div>';
   return run(async () => { staffList = await api('adminListStaff', S.token); drawStaff(); }); }
+function testEmail(btn){ run(async () => { const r = await api('adminTestEmail', S.token); show('Test email sent to ' + r.sentTo + '. Check your inbox (and spam).', 'ok'); }, btn); }
 function drawStaff(){
   $('stList').innerHTML = staffList.map(s => `<div class="prow" style="grid-template-columns:1fr auto"><div><b><span class="dot ${s.online?'live':'idle'}"></span>${esc(s.name)}</b>
     <span class="muted"> · ${s.role==='delivery' ? 'Delivery rider' : 'Cashier'} · ${s.online ? 'Online' : 'Offline'}${s.active ? '' : ' · Disabled'}</span>
@@ -582,6 +584,48 @@ async function saveStaff(){ $('sSave').disabled = true;
   $('sSave').disabled = false; }
 function delStaff(email){ if(!confirm('Remove ' + email + '? They will no longer be able to sign in.')) return;
   run(async () => { await api('adminDeleteStaff', S.token, email); await loadStaff(); show('Staff removed.', 'ok'); }); }
+
+/* ----- Reports and data cleanup (owner) ----- */
+const manila = () => new Date(Date.now() + 8*3600e3);
+function monthRange(off){ const d = manila(), y = d.getUTCFullYear(), m = d.getUTCMonth() + off;
+  return [new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10), new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10)]; }
+const csvCell = v => { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+const asText = v => '="' + String(v || '') + '"'; /* keeps the leading 0 of phone numbers in Excel */
+function downloadCsv(name, rows){ const blob = new Blob(['\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+const netOf = o => o.total - o.missing.reduce((t, m) => t + m.price*m.qty, 0);
+const dayOf = o => new Date(new Date(o.created).getTime() + 8*3600e3).toISOString().slice(0, 10);
+const when = o => new Date(o.created).toLocaleString('en-PH', {timeZone:'Asia/Manila', hour12:false});
+function reportRows(kind, list){
+  if(kind==='orders') return [['Order ID','Date (PH time)','Customer','Mobile','Email','Method','Address','Items','Missing items','Total','Adjusted total','Status','Rider','Delivery status','Store note','Customer note']]
+    .concat(list.map(o => [o.id, when(o), o.name, asText(o.contact), o.email, o.method, o.address, o.items.map(i => i.qty + ' x ' + i.name).join('; '),
+      o.missing.map(i => i.qty + ' x ' + i.name).join('; '), o.total, netOf(o), o.status, o.rider ? o.rider.name : '', o.deliveryStatus, o.adminNote, o.note]));
+  const done = list.filter(o => o.status !== 'Pending');
+  if(kind==='items'){ const m = {}; done.forEach(o => { const miss = o.missing.map(x => x.id); o.items.filter(i => !miss.includes(i.id)).forEach(i => { const e = m[i.name] || (m[i.name] = {q:0, v:0}); e.q += i.qty; e.v += i.qty*i.price; }); });
+    return [['Product','Quantity sold','Sales (PHP)']].concat(Object.keys(m).sort((a, b) => m[b].v - m[a].v).map(n => [n, m[n].q, m[n].v])); }
+  const d = {}; done.forEach(o => { const e = d[dayOf(o)] || (d[dayOf(o)] = {n:0, v:0}); e.n++; e.v += netOf(o); });
+  return [['Date','Orders','Sales (PHP)']].concat(Object.keys(d).sort().map(k => [k, d[k].n, d[k].v])); }
+function loadReports(){ const [f, t] = monthRange(0);
+  $('aReports').innerHTML = `<h2>Reports</h2>
+  <div class="card" style="margin-top:10px"><div class="two"><div><label for="rFrom">From</label><input id="rFrom" type="date" value="${f}"></div><div><label for="rTo">To</label><input id="rTo" type="date" value="${t}"></div></div>
+    <p class="links"><button class="alt" onclick="setRange(0)">This month</button><button class="alt" onclick="setRange(-1)">Last month</button><button class="alt" onclick="setRange(-2)">Last 2 months</button></p>
+    <p class="links"><button onclick="dl('orders',this)">⬇ Orders (CSV)</button><button onclick="dl('items',this)">⬇ Items sold (CSV)</button><button onclick="dl('daily',this)">⬇ Daily sales (CSV)</button></p>
+    <p class="muted" id="rSum">CSV files open in Excel or Google Sheets. Sales count Complete and Incomplete orders (missing items are deducted).</p></div>
+  <div class="card" style="margin-top:12px"><h3>Storage and cleanup</h3><p id="stor" class="muted">Checking…</p>
+    <p class="links"><button class="alt" onclick="dlOld(this)">⬇ Download old orders (CSV)</button><button class="alt del" id="purgeBtn" disabled onclick="purgeOld(this)">🗑 Delete orders older than 2 months</button></p>
+    <p class="muted">Keep only the last 2 months in the database to stay within the free plan. Download the old orders first, then delete them. Pending orders are never deleted.</p></div>`;
+  run(async () => { const x = await api('adminStorage', S.token); window.oldCount = x.oldCount;
+    $('stor').textContent = `Database size: ${x.sizeMb} MB of about 512 MB · ${x.totalOrders} orders stored · ${x.oldCount} order(s) older than 2 months` + (x.oldCount ? ' (download, then delete them)' : ' ✓');
+    if(!x.oldCount) $('purgeBtn').classList.add('hide'); }); }
+function setRange(off){ const [f, t] = monthRange(off === -2 ? -1 : off); $('rFrom').value = off === -2 ? monthRange(-1)[0] : f; $('rTo').value = off === -2 ? monthRange(0)[1] : t; }
+function dl(kind, btn){ run(async () => { const f = $('rFrom').value, t = $('rTo').value, list = await api('adminReport', S.token, f, t);
+    const rows = reportRows(kind, list), done = list.filter(o => o.status !== 'Pending');
+    downloadCsv(`${kind}_${f}_to_${t}.csv`, rows);
+    $('rSum').textContent = `${list.length} orders in this period · ${done.length} confirmed · sales ${peso(done.reduce((s, o) => s + netOf(o), 0))}`; }, btn); }
+function dlOld(btn){ run(async () => { const c = new Date(manila().getTime() - 60*864e5).toISOString().slice(0, 10), list = await api('adminReport', S.token, '2000-01-01', c);
+    downloadCsv(`old_orders_until_${c}.csv`, reportRows('orders', list)); $('purgeBtn').disabled = false; show(list.length + ' old order(s) downloaded. You can now delete them from the database.', 'ok'); }, btn); }
+function purgeOld(btn){ if(!confirm('Delete all orders older than 2 months from the database? Make sure you downloaded the CSV. This cannot be undone.')) return;
+  run(async () => { const r = await api('adminPurgeOld', S.token); await loadReports(); show(r.deleted + ' old order(s) deleted.', 'ok'); }, btn); }
 
 /* ----- Delivery rider screen ----- */
 function riderCard(o){
