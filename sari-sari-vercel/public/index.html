@@ -252,7 +252,7 @@ const $ = id => document.getElementById(id);
 let ADDR = '743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan', STORE = 'Jeriel Store';
 const peso = n => '₱' + Number(n).toLocaleString('en-PH');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const api = async (fn, ...a) => {
   let r;
   try { r = fn === 'getProducts' ? await fetch('/api/rpc?fn=getProducts') : await fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})}); }
@@ -305,7 +305,7 @@ function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; app
   updateCart(); window.scrollTo(0,0); }
 
 /* ----- Shop: cached list + prebuilt search index, refreshed in background ----- */
-function prep(l){ products = (l || []).map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
+function prep(l){ products = l.map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
   .sort((a,b) => (b.stock>0)-(a.stock>0) || a.name.localeCompare(b.name)); }
 function loadShop(){
   const c = load('sariP'); if(c && !products.length){ prep(c); drawShop(); }
@@ -357,7 +357,7 @@ function drawCartView(){
       <div class="qty"><button class="alt" aria-label="Remove one ${esc(p.name)}" onclick="chg('${id}',-1)">−</button><b>${cart[id]}</b>
       <button aria-label="Add one ${esc(p.name)}" ${cart[id]>=p.stock?'disabled':''} onclick="chg('${id}',1)">+</button></div>
       <div>${peso(p.price*cart[id])}</div></div>`; }).join('')
-    : '<p>Your cart is empty. <button class="alt" onclick="view('shop')">Browse products</button></p>';
+    : '<p>Your cart is empty. <button class="alt" onclick="view(\'shop\')">Browse products</button></p>';
   $('total').textContent = n ? 'Total: ' + peso(t) : '';
   $('co').classList.toggle('hide', !n); $('emptyBtn').classList.toggle('hide', !n);
   const c = lload('sariCust'); if(c && !$('cName').value){ $('cName').value = c.name||''; $('cPhone').value = c.contact||''; $('cEmail').value = c.email||''; $('cAddr').value = c.address||''; }
@@ -427,19 +427,19 @@ function assignHtml(o){
   const opts = riders.map(r => `<option value="${r.id}">${esc(r.name)} ${r.online ? '(online)' : '(offline)'}</option>`).join('');
   return riders.length ? `<p class="row" style="justify-content:flex-start"><select id="rs_${o.id}" style="max-width:260px">${opts}</select><button class="alt" onclick="assignRider('${o.id}', this)">Assign rider</button></p>` : '<div class="muted">No riders set up yet (Staff tab).</div>'; }
 function orderHtml(o, admin){
-  const miss = (o.missing || []).map(m => m.id);
+  const miss = o.missing.map(m => m.id);
   return `<div class="card order" id="o_${o.id}">
     <div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.status}">${o.status}</span></div>
     <div class="muted">${fmt(o.created)} · ${esc(o.method)}${admin ? ' · '+esc(o.name)+' · <a href="tel:'+esc(o.contact)+'">'+esc(o.contact)+'</a>'+(o.email?' · '+esc(o.email):'') : ''}</div>
     <div class="muted">${o.method==='Delivery' ? 'Deliver to: '+esc(o.address) : esc(pickup())}</div>
     ${riderBlock(o, admin)}${admin ? assignHtml(o) : ''}
     ${o.note ? `<div class="muted">Customer note: ${esc(o.note)}</div>` : ''}
-    <ul>${(o.items || []).map(i => `<li>${admin && o.status==='Pending'
+    <ul>${o.items.map(i => `<li>${admin && o.status==='Pending'
         ? `<label><input type="checkbox" value="${i.id}"> ${i.qty} × ${esc(i.name)} <span class="muted">(tick if missing)</span></label>`
         : `<span class="${miss.includes(i.id)?'miss':''}">${i.qty} × ${esc(i.name)}${miss.includes(i.id)?' (missing)':''}</span>`}
         <span>${peso(i.qty*i.price)}</span></li>`).join('')}</ul>
     <div class="row"><b>Total ${peso(o.total)}</b>
-      ${o.status==='Incomplete' ? `<span class="miss">Adjusted: ${peso(o.total - (o.missing || []).reduce((s,m)=>s+m.price*m.qty,0))}</span>` : ''}</div>
+      ${o.status==='Incomplete' ? `<span class="miss">Adjusted: ${peso(o.total - o.missing.reduce((s,m)=>s+m.price*m.qty,0))}</span>` : ''}</div>
     ${o.adminNote ? `<div class="muted">Store note: ${esc(o.adminNote)}</div>` : ''}
     ${admin && o.status==='Pending' ? `<label for="n_${o.id}">Note to customer (optional)</label><input id="n_${o.id}">
       <p><button class="go" onclick="review('${o.id}', this)">Confirm order</button>
@@ -465,8 +465,8 @@ function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove
   try { Notification.requestPermission(); } catch(e){}
   poll(); pollT = setInterval(poll, 20000); }
 async function poll(){ /* also keeps this person marked online */
-  try { const rider = S.role==='delivery', l = await api(rider ? 'riderPoll' : 'adminPoll', S.token), ids = (l || []).map(o => o.id);
-    const fresh = known ? (l || []).filter(o => !known.includes(o.id)) : []; known = ids;
+  try { const rider = S.role==='delivery', l = await api(rider ? 'riderPoll' : 'adminPoll', S.token), ids = l.map(o => o.id);
+    const fresh = known ? l.filter(o => !known.includes(o.id)) : []; known = ids;
     $('ordLbl').textContent = rider ? (ids.length ? `Deliveries (${ids.length} new)` : 'Deliveries') : (ids.length ? `Orders (${ids.length} pending)` : 'Orders');
     if(fresh.length){ const o = fresh[0];
       const t = fresh.length>1 ? fresh.length + (rider ? ' new delivery requests!' : ' new orders!') : (rider ? `Delivery request from ${o.name} · ${peso(o.total)}` : `New order from ${o.name} · ${peso(o.total)} · ${o.method}`);
@@ -488,10 +488,10 @@ function resetInv(){ aq = ''; loadAdminProducts(); }
 function drawOrders(){
   const t = norm(oq).trim(), d = digits(oq), k = idk(oq);
   const hit = o => norm(o.name).includes(t) || (d && digits(o.contact).includes(d)) || (k && idk(o.id).includes(k));
-  const c = s => (aData || []).filter(o => o.status===s).length;
+  const c = s => aData.filter(o => o.status===s).length;
   $('oTabs').innerHTML = ['Pending','Complete','Incomplete','All'].map(s =>
-    `<button class="tab ${!t && s===aFilter?'on':''}" onclick="aFilter='${s}';oq='';$('oSearch').value='';$('oSx').classList.add('hide');drawOrders()">${s} (${s==='All'?(aData||[]).length:c(s)})</button>`).join('');
-  const f = t ? (aData || []).filter(hit) : (aFilter==='All' ? (aData || []) : (aData || []).filter(o => o.status===aFilter));
+    `<button class="tab ${!t && s===aFilter?'on':''}" onclick="aFilter='${s}';oq='';$('oSearch').value='';$('oSx').classList.add('hide');drawOrders()">${s} (${s==='All'?aData.length:c(s)})</button>`).join('');
+  const f = t ? aData.filter(hit) : (aFilter==='All' ? aData : aData.filter(o => o.status===aFilter));
   $('oInfo').textContent = t ? `${f.length} match${f.length===1?'':'es'} for "${oq}" in the last 7 days (pending orders always shown)` : 'Showing the last 7 days · pending orders always shown';
   $('oList').innerHTML = f.map(o => orderHtml(o, true)).join('') || '<p>No orders here.</p>'; }
 function review(id, btn){
@@ -502,25 +502,25 @@ function review(id, btn){
     show(id + ' marked ' + r.status + '. ' + (r.emailed ? 'Customer was emailed. ' : '') + 'They will see it in Track order.', 'ok'); loadAdminOrders(); poll(); }, btn); }
 
 /* ----- Admin inventory (CRUD) ----- */
-const cats = () => [...new Set((adm || []).map(p => p.category).filter(Boolean))].sort();
+const cats = () => [...new Set(adm.map(p => p.category).filter(Boolean))].sort();
 function loadAdminProducts(){
   $('aProducts').innerHTML = `<div class="row" style="margin-bottom:10px"><div class="sw"><input id="aSearch" type="search" placeholder="Search inventory" aria-label="Search inventory" oninput="aq=this.value;$('aSx').classList.toggle('hide',!aq);drawAdm()"><button class="x hide" id="aSx" aria-label="Clear search" onclick="aq='';$('aSearch').value='';this.classList.add('hide');drawAdm()">×</button></div>
     <button class="alt" onclick="resetInv()">↻ Clear &amp; refresh</button> <button class="go" onclick="editProd()">+ Add product</button></div><div class="card" id="admList"></div>`;
   return run(async () => { adm = await api('adminGetProducts', S.token); drawAdm(); }); }
 function drawAdm(){
   const terms = norm(aq).split(/\s+/).filter(Boolean);
-  const f = (adm || []).filter(p => { const s = norm([p.name, p.category, ...(p.tags || [])].join(' ')); return terms.every(t => s.includes(t)); })
+  const f = adm.filter(p => { const s = norm([p.name, p.category, ...p.tags].join(' ')); return terms.every(t => s.includes(t)); })
     .sort((a,b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
   $('admList').innerHTML = `<div class="prow head"><div>Product</div><div>Base price</div><div>Stock</div><div></div></div>` +
-    (f.map(p => `<div class="prow"><div style="display:flex;gap:10px;align-items:center"><div class="pimg thumb">${imgTag(p.image, 90)}</div><div><b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>${(p.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
+    (f.map(p => `<div class="prow"><div style="display:flex;gap:10px;align-items:center"><div class="pimg thumb">${imgTag(p.image, 90)}</div><div><b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
       <div>${peso(p.price)}</div><div class="${p.stock<=5?'miss':''}">${p.stock}</div>
       <div class="acts"><button class="alt" onclick="editProd('${p.id}')">Edit</button>${S.role==='admin' ? `<button class="alt del" onclick="delProd('${p.id}')">Delete</button>` : ''}</div></div>`).join('')
-    || '<p>No products found.</p>') + `<p class="muted">${f.length} of ${(adm || []).length} products · ${(adm || []).filter(p => p.image).length} with images saved</p>`; }
+    || '<p>No products found.</p>') + `<p class="muted">${f.length} of ${adm.length} products · ${adm.filter(p => p.image).length} with images saved</p>`; }
 function editProd(id){
-  const p = (adm || []).find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[]};
+  const p = adm.find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[]};
   $('pdTitle').textContent = id ? 'Edit product' : 'Add product'; $('pErr').innerHTML = ''; $('pd').dataset.id = id || '';
   img = p.image || ''; imgChanged = false; showPrev(); $('pFile').value = ''; $('pUp').textContent = '';
-  $('pName').value = p.name; $('pPrice').value = p.price; $('pStock').value = p.stock; $('tagIn').value = ''; tags = [...(p.tags || [])]; drawTags();
+  $('pName').value = p.name; $('pPrice').value = p.price; $('pStock').value = p.stock; $('tagIn').value = ''; tags = [...p.tags]; drawTags();
   $('pCat').innerHTML = cats().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__new">+ New category…</option>';
   $('pCat').value = p.category || (cats()[0] || '__new');
   $('pNewCat').value = ''; $('pNewCat').classList.toggle('hide', $('pCat').value!=='__new');
@@ -556,9 +556,9 @@ async function saveProd(){
     await loadAdminProducts(); show('Saved ' + p.name + '.', 'ok');
   } catch(e){ $('pErr').innerHTML = `<div class="msg err" role="alert">${esc(e.message || e)}</div>`; }
   $('pSave').disabled = false; }
-function delProd(id){ const p = (adm || []).find(x => x.id===id);
-  if(!confirm('Delete "' + (p ? p.name : id) + '"? Past orders keep their item names.')) return;
-  run(async () => { await api('adminDeleteProduct', S.token, id); sessionStorage.removeItem('sariP'); await loadAdminProducts(); show('Deleted product.', 'ok'); }); }
+function delProd(id){ const p = adm.find(x => x.id===id);
+  if(!confirm('Delete "' + p.name + '"? Past orders keep their item names.')) return;
+  run(async () => { await api('adminDeleteProduct', S.token, id); sessionStorage.removeItem('sariP'); await loadAdminProducts(); show('Deleted ' + p.name + '.', 'ok'); }); }
 
 /* ----- Staff management (owner) ----- */
 let staffList = [];
@@ -567,12 +567,12 @@ async function loadStaff(){
   return run(async () => { staffList = await api('adminListStaff', S.token); drawStaff(); }); }
 function testEmail(btn){ run(async () => { const r = await api('adminTestEmail', S.token); show('Test email sent to ' + r.sentTo + '. Check your inbox (and spam).', 'ok'); }, btn); }
 function drawStaff(){
-  $('stList').innerHTML = (staffList || []).map(s => `<div class="prow" style="grid-template-columns:1fr auto"><div><b><span class="dot ${s.online?'live':'idle'}"></span>${esc(s.name)}</b>
+  $('stList').innerHTML = staffList.map(s => `<div class="prow" style="grid-template-columns:1fr auto"><div><b><span class="dot ${s.online?'live':'idle'}"></span>${esc(s.name)}</b>
     <span class="muted"> · ${s.role==='delivery' ? 'Delivery rider' : 'Cashier'} · ${s.online ? 'Online' : 'Offline'}${s.active ? '' : ' · Disabled'}</span>
     <div class="muted">${esc(s.email)} · ${esc(s.phone)}</div></div>
     <div class="acts"><button class="alt" onclick="editStaff('${esc(s.email)}')">Edit</button><button class="alt del" onclick="delStaff('${esc(s.email)}')">Remove</button></div></div>`).join('')
     || '<p>No staff yet. Add a cashier or a delivery rider.</p>'; }
-function editStaff(email){ const s = (staffList || []).find(x => x.email===email) || {name:'', email:'', phone:'', role:'cashier', active:true};
+function editStaff(email){ const s = staffList.find(x => x.email===email) || {name:'', email:'', phone:'', role:'cashier', active:true};
   $('sdTitle').textContent = email ? 'Edit staff' : 'Add staff'; $('sErr').innerHTML = ''; $('sd').dataset.edit = email || '';
   $('sName').value = s.name; $('sEmail').value = s.email; $('sEmail').disabled = !!email; $('sPhone').value = s.phone; $('sRole').value = s.role;
   $('sPass').value = ''; $('sPassNote').textContent = email ? '(leave blank to keep the current password)' : '(at least 6 characters)'; $('sActive').checked = s.active;
@@ -589,22 +589,19 @@ function delStaff(email){ if(!confirm('Remove ' + email + '? They will no longer
 const manila = () => new Date(Date.now() + 8*3600e3);
 function monthRange(off){ const d = manila(), y = d.getUTCFullYear(), m = d.getUTCMonth() + off;
   return [new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10), new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10)]; }
-const csvCell = v => { v = String(v == null ? '' : v); return /[",
-]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+const csvCell = v => { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
 const asText = v => '="' + String(v || '') + '"'; /* keeps the leading 0 of phone numbers in Excel */
-function downloadCsv(name, rows){ const blob = new Blob(['﻿' + (rows || []).map(r => r.map(csvCell).join(',')).join('
-')], {type:'text/csv;charset=utf-8'});
+function downloadCsv(name, rows){ const blob = new Blob(['\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
-const netOf = o => o.total - (o.missing || []).reduce((t, m) => t + m.price*m.qty, 0);
+const netOf = o => o.total - o.missing.reduce((t, m) => t + m.price*m.qty, 0);
 const dayOf = o => new Date(new Date(o.created).getTime() + 8*3600e3).toISOString().slice(0, 10);
 const when = o => new Date(o.created).toLocaleString('en-PH', {timeZone:'Asia/Manila', hour12:false});
 function reportRows(kind, list){
-  list = list || [];
   if(kind==='orders') return [['Order ID','Date (PH time)','Customer','Mobile','Email','Method','Address','Items','Missing items','Total','Adjusted total','Status','Rider','Delivery status','Store note','Customer note']]
-    .concat(list.map(o => [o.id, when(o), o.name, asText(o.contact), o.email, o.method, o.address, (o.items || []).map(i => i.qty + ' x ' + i.name).join('; '),
-      (o.missing || []).map(i => i.qty + ' x ' + i.name).join('; '), o.total, netOf(o), o.status, o.rider ? o.rider.name : '', o.deliveryStatus, o.adminNote, o.note]));
+    .concat(list.map(o => [o.id, when(o), o.name, asText(o.contact), o.email, o.method, o.address, o.items.map(i => i.qty + ' x ' + i.name).join('; '),
+      o.missing.map(i => i.qty + ' x ' + i.name).join('; '), o.total, netOf(o), o.status, o.rider ? o.rider.name : '', o.deliveryStatus, o.adminNote, o.note]));
   const done = list.filter(o => o.status !== 'Pending');
-  if(kind==='items'){ const m = {}; done.forEach(o => { const miss = (o.missing || []).map(x => x.id); (o.items || []).filter(i => !miss.includes(i.id)).forEach(i => { const e = m[i.name] || (m[i.name] = {q:0, v:0}); e.q += i.qty; e.v += i.qty*i.price; }); });
+  if(kind==='items'){ const m = {}; done.forEach(o => { const miss = o.missing.map(x => x.id); o.items.filter(i => !miss.includes(i.id)).forEach(i => { const e = m[i.name] || (m[i.name] = {q:0, v:0}); e.q += i.qty; e.v += i.qty*i.price; }); });
     return [['Product','Quantity sold','Sales (PHP)']].concat(Object.keys(m).sort((a, b) => m[b].v - m[a].v).map(n => [n, m[n].q, m[n].v])); }
   const d = {}; done.forEach(o => { const e = d[dayOf(o)] || (d[dayOf(o)] = {n:0, v:0}); e.n++; e.v += netOf(o); });
   return [['Date','Orders','Sales (PHP)']].concat(Object.keys(d).sort().map(k => [k, d[k].n, d[k].v])); }
@@ -622,11 +619,11 @@ function loadReports(){ const [f, t] = monthRange(0);
     if(!x.oldCount) $('purgeBtn').classList.add('hide'); }); }
 function setRange(off){ const [f, t] = monthRange(off === -2 ? -1 : off); $('rFrom').value = off === -2 ? monthRange(-1)[0] : f; $('rTo').value = off === -2 ? monthRange(0)[1] : t; }
 function dl(kind, btn){ run(async () => { const f = $('rFrom').value, t = $('rTo').value, list = await api('adminReport', S.token, f, t);
-    const rows = reportRows(kind, list), done = (list || []).filter(o => o.status !== 'Pending');
+    const rows = reportRows(kind, list), done = list.filter(o => o.status !== 'Pending');
     downloadCsv(`${kind}_${f}_to_${t}.csv`, rows);
-    $('rSum').textContent = `${(list || []).length} orders in this period · ${done.length} confirmed · sales ${peso(done.reduce((s, o) => s + netOf(o), 0))}`; }, btn); }
+    $('rSum').textContent = `${list.length} orders in this period · ${done.length} confirmed · sales ${peso(done.reduce((s, o) => s + netOf(o), 0))}`; }, btn); }
 function dlOld(btn){ run(async () => { const c = new Date(manila().getTime() - 60*864e5).toISOString().slice(0, 10), list = await api('adminReport', S.token, '2000-01-01', c);
-    downloadCsv(`old_orders_until_${c}.csv`, reportRows('orders', list)); $('purgeBtn').disabled = false; show((list || []).length + ' old order(s) downloaded. You can now delete them from the database.', 'ok'); }, btn); }
+    downloadCsv(`old_orders_until_${c}.csv`, reportRows('orders', list)); $('purgeBtn').disabled = false; show(list.length + ' old order(s) downloaded. You can now delete them from the database.', 'ok'); }, btn); }
 function purgeOld(btn){ if(!confirm('Delete all orders older than 2 months from the database? Make sure you downloaded the CSV. This cannot be undone.')) return;
   run(async () => { const r = await api('adminPurgeOld', S.token); await loadReports(); show(r.deleted + ' old order(s) deleted.', 'ok'); }, btn); }
 
@@ -638,10 +635,10 @@ function riderCard(o){
   return `<div class="card order"><div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.deliveryStatus}">${o.deliveryStatus}</span></div>
     <div class="muted">${fmt(o.created)} · ${esc(o.name)}</div>${contactLinks(o.contact)}
     <div>📍 ${esc(o.address)}</div>${o.note ? `<div class="muted">Customer note: ${esc(o.note)}</div>` : ''}
-    <ul>${(o.items || []).map(i => `<li><span>${i.qty} × ${esc(i.name)}</span><span>${peso(i.qty*i.price)}</span></li>`).join('')}</ul>
+    <ul>${o.items.map(i => `<li><span>${i.qty} × ${esc(i.name)}</span><span>${peso(i.qty*i.price)}</span></li>`).join('')}</ul>
     <div class="row"><b>Total ${peso(o.total)}</b></div>${act}</div>`; }
 function loadRider(){ return run(async () => { const l = await api('riderOrders', S.token);
-  const sec = (t, f) => { const x = (l || []).filter(o => f.includes(o.deliveryStatus)); return x.length ? `<h3 style="margin:14px 0 6px">${t} (${x.length})</h3>` + x.map(riderCard).join('') : ''; };
+  const sec = (t, f) => { const x = l.filter(o => f.includes(o.deliveryStatus)); return x.length ? `<h3 style="margin:14px 0 6px">${t} (${x.length})</h3>` + x.map(riderCard).join('') : ''; };
   $('rDeliveries').innerHTML = sec('New requests', ['Requested']) + sec('On the way', ['Accepted']) + sec('Recent', ['Delivered', 'Declined']) || '<p>No deliveries yet. Customers who choose you as their rider will show up here.</p>'; }); }
 function respond(id, action, btn){ run(async () => { await api('riderRespond', S.token, id, action); await loadRider(); poll(); }, btn); }
 
