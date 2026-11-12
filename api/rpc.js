@@ -398,9 +398,18 @@ const fns = { getInfo, getProducts, getRiders, placeOrder, trackOrder, trackMany
 
 module.exports = async (req, res) => {
   try {
-    if (req.method === 'GET' && new URL(req.url, 'http://x').searchParams.get('fn') === 'getProducts') { // cached at the edge to save database use
+    /* ----------if (req.method === 'GET' && new URL(req.url, 'http://x').searchParams.get('fn') === 'getProducts') { // cached at the edge to save database use
       await init(); res.setHeader('Cache-Control', 'public, s-maxage=20, stale-while-revalidate=120');
       return res.status(200).json({ result: await getProducts() });
+    }---------- */
+    if (req.method === 'GET' && new URL(req.url, 'http://x').searchParams.get('fn') === 'getProducts') { 
+      await init(); res.setHeader('Cache-Control', 'public, s-maxage=20, stale-while-revalidate=120');
+      
+      // Change this line:
+      // return res.status(200).json({ result: await getProducts() });
+      
+      // To this:
+      return res.status(200).json(await getProducts());
     }
     if (req.method === 'GET') { // open /api/rpc in your browser to check the setup
       let db = 'ok'; try { await init(); await q('select 1'); } catch (e) { db = String(e.message).slice(0, 160); }
