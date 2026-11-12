@@ -118,8 +118,7 @@ async function sendCode(email) {
   const code = String(crypto.randomInt(100000, 1000000));
   await q('insert into admin_codes(email,code,expires) values ($1,$2,$3) on conflict (email) do update set code=$2, expires=$3',
     [email, code, Date.now() + CODE_MIN * 60000]);
-  if (!(await tryMail(email, 'Sign-in code: ' + code, `Your ${STORE_NAME} code is ${code}.
-It expires in ${CODE_MIN} minutes.`)))
+  if (!(await tryMail(email, 'Sign-in code: ' + code, `Your ${STORE_NAME} code is ${code}.\nIt expires in ${CODE_MIN} minutes.`)))
     throw new E('Email is not set up. Use your password instead.');
   return { sent: true };
 }
@@ -154,12 +153,11 @@ async function getInfo() {
 }
 async function getProducts() {
   const { rows } = await q('select * from products order by name');
-  const safeRows = rows || [];
-  return safeRows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
+  return rows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
 }
 async function getRiders() {
   const { rows } = await q("select rid,name,phone,last_seen from staff where role='delivery' and active order by name");
-  return (rows || []).map(r => ({ id: r.rid, name: r.name, phone: r.phone, online: Number(r.last_seen) > Date.now() - ONLINE_MS }));
+  return rows.map(r => ({ id: r.rid, name: r.name, phone: r.phone, online: Number(r.last_seen) > Date.now() - ONLINE_MS }));
 }
 async function placeOrder(o) {
   const name = String(o.name || '').trim(), contact = normPhone(o.contact), address = String(o.address || '').trim();
@@ -197,29 +195,11 @@ async function placeOrder(o) {
     await client.query('commit');
   } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
   if (emailOn()) {
-    const mails = [notifyStore('New order ' + orderId, `${name} (${contact}) - ${method} - PHP ${total}
-
-` +
-      items.map(i => `- ${i.qty} x ${i.name}`).join('
-') + (method === 'Delivery' ? `
-
-Deliver to: ${address}` : '
-
-Store pickup'))];
-    if (email) mails.push(tryMail(email, `Your order ${orderId} - ${STORE_NAME}`, `Hi ${name},
-
-Thank you for your order!
-Order ID: ${orderId}
-
-` +
-      items.map(i => `- ${i.qty} x ${i.name} @ PHP ${i.price} = PHP ${i.qty * i.price}`).join('
-') +
-      `
-
-Total: PHP ${total}
-${method === 'Pickup' ? 'Pick up at: ' + STORE_NAME + ' ' + STORE_ADDRESS : 'Delivery to: ' + address}
-
-We will email you once the store confirms your order.`));
+    const mails = [notifyStore('New order ' + orderId, `${name} (${contact}) - ${method} - PHP ${total}\n\n` +
+      items.map(i => `- ${i.qty} x ${i.name}`).join('\n') + (method === 'Delivery' ? `\n\nDeliver to: ${address}` : '\n\nStore pickup'))];
+    if (email) mails.push(tryMail(email, `Your order ${orderId} - ${STORE_NAME}`, `Hi ${name},\n\nThank you for your order!\nOrder ID: ${orderId}\n\n` +
+      items.map(i => `- ${i.qty} x ${i.name} @ PHP ${i.price} = PHP ${i.qty * i.price}`).join('\n') +
+      `\n\nTotal: PHP ${total}\n${method === 'Pickup' ? 'Pick up at: ' + STORE_NAME + ' ' + STORE_ADDRESS : 'Delivery to: ' + address}\n\nWe will email you once the store confirms your order.`));
     await Promise.all(mails);
   }
   return { orderId, total };
@@ -236,46 +216,34 @@ async function trackMany(items) {
   if (!list.length) return [];
   const { rows } = await q("select * from orders where created > now() - interval '30 days' and upper(regexp_replace(id,'[^A-Za-z0-9]','','g')) = any($1) order by created desc", [list.map(i => i.k)]);
   const rm = await riderMap();
-  return (rows || []).filter(o => list.some(i => i.k === idKey(o.id) && i.c === normPhone(o.contact))).map(o => orderOut(o, rm));
+  return rows.filter(o => list.some(i => i.k === idKey(o.id) && i.c === normPhone(o.contact))).map(o => orderOut(o, rm));
 }
 
 /* ---------- Admin + cashier ---------- */
 async function adminGetOrders(token) {
   await auth(token, STORE_ROLES);
   const { rows } = await q("select * from orders where status='Pending' or created > now() - interval '7 days' order by created desc");
-  const rm = await riderMap(); return (rows || []).map(o => orderOut(o, rm));
+  const rm = await riderMap(); return rows.map(o => orderOut(o, rm));
 }
 async function adminPoll(token) {
   await auth(token, STORE_ROLES);
   const { rows } = await q("select id,name,total,method from orders where status='Pending'");
-  return (rows || []).map(r => ({ id: r.id, name: r.name, total: Number(r.total), method: r.method }));
+  return rows.map(r => ({ id: r.id, name: r.name, total: Number(r.total), method: r.method }));
 }
 async function adminReviewOrder(token, orderId, missingIds, adminNote) {
   await auth(token, STORE_ROLES);
   const { rows } = await q('select * from orders where id=$1', [orderId]), o = rows[0];
   if (!o) throw new E('Order not found.');
   if (o.status !== 'Pending') throw new E('This order was already reviewed.');
-  const missing = (o.items || []).filter(i => (missingIds || []).includes(i.id)), status = missing.length ? 'Incomplete' : 'Complete';
+  const missing = o.items.filter(i => (missingIds || []).includes(i.id)), status = missing.length ? 'Incomplete' : 'Complete';
   await q('update orders set status=$1, missing=$2, admin_note=$3 where id=$4', [status, JSON.stringify(missing), String(adminNote || '').slice(0, 300), orderId]);
   let emailed = false;
   if (o.email && emailOn()) {
     const refund = missing.reduce((t, i) => t + i.price * i.qty, 0);
-    let body = `Hi ${o.name},
-
-Your order ${orderId} is ${status.toUpperCase()}.
-`;
-    if (missing.length) body += `
-Missing items:
-${missing.map(i => `- ${i.qty} x ${i.name}`).join('
-')}
-Amount deducted: PHP ${refund}
-New total: PHP ${Number(o.total) - refund}
-`;
-    if (adminNote) body += `
-Note from the store: ${adminNote}
-`;
-    body += '
-' + (o.method === 'Pickup' ? 'Pick up at: ' + STORE_NAME + ' ' + STORE_ADDRESS : 'It will be delivered to ' + o.address + '.');
+    let body = `Hi ${o.name},\n\nYour order ${orderId} is ${status.toUpperCase()}.\n`;
+    if (missing.length) body += `\nMissing items:\n${missing.map(i => `- ${i.qty} x ${i.name}`).join('\n')}\nAmount deducted: PHP ${refund}\nNew total: PHP ${Number(o.total) - refund}\n`;
+    if (adminNote) body += `\nNote from the store: ${adminNote}\n`;
+    body += '\n' + (o.method === 'Pickup' ? 'Pick up at: ' + STORE_NAME + ' ' + STORE_ADDRESS : 'It will be delivered to ' + o.address + '.');
     emailed = await tryMail(o.email, `Order ${orderId}: ${status}`, body);
   }
   return { status, emailed };
@@ -291,7 +259,7 @@ async function adminAssignRider(token, orderId, rid) {
 async function adminGetProducts(token) {
   await auth(token, STORE_ROLES);
   const { rows } = await q('select * from products order by category, name');
-  return (rows || []).map(prod);
+  return rows.map(prod);
 }
 async function adminSaveProduct(token, p) {
   await auth(token, STORE_ROLES);
@@ -324,7 +292,7 @@ async function adminDeleteProduct(token, id) {
 async function adminListStaff(token) {
   await auth(token, ['admin']);
   const { rows } = await q('select email,name,phone,role,active,last_seen from staff order by role, name');
-  return (rows || []).map(r => ({ email: r.email, name: r.name, phone: r.phone, role: r.role, active: r.active, online: r.active && Number(r.last_seen) > Date.now() - ONLINE_MS }));
+  return rows.map(r => ({ email: r.email, name: r.name, phone: r.phone, role: r.role, active: r.active, online: r.active && Number(r.last_seen) > Date.now() - ONLINE_MS }));
 }
 async function adminSaveStaff(token, s) {
   await auth(token, ['admin']);
@@ -358,12 +326,12 @@ async function adminDeleteStaff(token, email) {
 async function riderOrders(token) {
   const a = await auth(token, ['delivery']);
   const { rows } = await q("select * from orders where rider=$1 and method='Delivery' and (delivery_status in ('Requested','Accepted') or created > now() - interval '7 days') order by created desc", [a.staff.rid]);
-  return (rows || []).map(o => orderOut(o, {}));
+  return rows.map(o => orderOut(o, {}));
 }
 async function riderPoll(token) {
   const a = await auth(token, ['delivery']);
   const { rows } = await q("select id,name,total from orders where rider=$1 and delivery_status='Requested'", [a.staff.rid]);
-  return (rows || []).map(r => ({ id: r.id, name: r.name, total: Number(r.total) }));
+  return rows.map(r => ({ id: r.id, name: r.name, total: Number(r.total) }));
 }
 async function riderRespond(token, orderId, action) {
   const a = await auth(token, ['delivery']);
@@ -377,11 +345,7 @@ async function riderRespond(token, orderId, action) {
     if (o.email) {
       const msg = { Accepted: `${rn} accepted your delivery and will bring your order soon.`, Declined: `${rn} is not able to take your delivery. The store will assign another rider.`,
         Delivered: 'Your order was delivered. Thank you for shopping with us!' }[step[1]];
-      await tryMail(o.email, `Order ${orderId}: delivery ${step[1].toLowerCase()}`, `Hi ${o.name},
-
-${msg}
-
-Order ID: ${orderId}`);
+      await tryMail(o.email, `Order ${orderId}: delivery ${step[1].toLowerCase()}`, `Hi ${o.name},\n\n${msg}\n\nOrder ID: ${orderId}`);
     }
     if (step[1] === 'Declined') await notifyStore(`Rider declined order ${orderId}`, `${rn} declined the delivery for ${o.name}. Please assign another rider.`);
   }
@@ -402,7 +366,7 @@ async function adminReport(token, from, to) {
   const f = ok(from) ? new Date(from + 'T00:00:00+08:00') : new Date('2000-01-01T00:00:00Z');
   const t = ok(to) ? new Date(new Date(to + 'T00:00:00+08:00').getTime() + 86400000) : new Date(Date.now() + 86400000);
   const { rows } = await q('select * from orders where created >= $1 and created < $2 order by created limit 5000', [f, t]);
-  const rm = await riderMap(); return (rows || []).map(o => orderOut(o, rm));
+  const rm = await riderMap(); return rows.map(o => orderOut(o, rm));
 }
 async function adminStorage(token) {
   await auth(token, ['admin']);
@@ -434,7 +398,7 @@ module.exports = async (req, res) => {
       let db = 'ok'; try { await init(); await q('select 1'); } catch (e) { db = String(e.message).slice(0, 160); }
       return res.status(200).json({ ok: db === 'ok', database: db, settings: {
         DATABASE_URL: !!(process.env.DATABASE_URL || process.env.POSTGRES_URL), ADMIN_EMAILS: ADMIN_EMAILS.length,
-        ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD, CLOUDINARY: !!(process.env.CLOUDINARY_CLOUD && process.env.CLOUDINARY_PRESET), email: emailOn() } });
+        ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD, CLOUDINARY: !!(process.env.CLOUDINARY_CLOUD && process.env.CLOUDINARY_PRESET), email: process.env.BREVO_API_KEY && process.env.MAIL_FROM ? 'brevo' : process.env.RESEND_API_KEY ? 'resend' : process.env.GMAIL_USER ? 'gmail' : 'not set up' } });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
     const { fn, args } = req.body || {};
