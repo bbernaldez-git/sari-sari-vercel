@@ -305,8 +305,12 @@ function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; app
   updateCart(); window.scrollTo(0,0); }
 
 /* ----- Shop: cached list + prebuilt search index, refreshed in background ----- */
-function prep(l){ products = l.map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
-  .sort((a,b) => (b.stock>0)-(a.stock>0) || a.name.localeCompare(b.name)); }
+/* -----function prep(l){ products = l.map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
+  .sort((a,b) => (b.stock>0)-(a.stock>0) || a.name.localeCompare(b.name)); }----- */
+function prep(l){ 
+  products = (l || []).map(p => ({...p, _s: norm([p.name, p.category, ...(p.tags||[])].join(' '))}))
+    .sort((a,b) => (b.stock>0)-(a.stock>0) || a.name.localeCompare(b.name)); 
+}
 function loadShop(){
   const c = load('sariP'); if(c && !products.length){ prep(c); drawShop(); }
   api('getProducts').then(l => { store('sariP', l); prep(l); if(cur==='shop') drawShop(); if(cur==='cart') drawCartView(); })
