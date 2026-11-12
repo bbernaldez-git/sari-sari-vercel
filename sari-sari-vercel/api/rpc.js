@@ -137,9 +137,15 @@ async function signOut(token) {
 async function getInfo() {
   return { name: STORE_NAME, address: STORE_ADDRESS, cloud: process.env.CLOUDINARY_CLOUD || '', preset: process.env.CLOUDINARY_PRESET || '', emailCodes: emailOn() };
 }
-async function getProducts() {
+/* ---------- async function getProducts() {
   const { rows } = await q('select * from products order by name');
   return rows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
+}---------- */
+async function getProducts() {
+  const { rows } = await q('select * from products order by name');
+  // Ensure rows is always an array before mapping
+  const safeRows = rows || [];
+  return safeRows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
 }
 async function getRiders() {
   const { rows } = await q("select rid,name,phone,last_seen from staff where role='delivery' and active order by name");
