@@ -151,14 +151,21 @@ async function signOut(token) {
 async function getInfo() {
   return { name: STORE_NAME, address: STORE_ADDRESS, cloud: process.env.CLOUDINARY_CLOUD || '', preset: process.env.CLOUDINARY_PRESET || '', emailCodes: emailOn() };
 }
-async function getProducts() {
+/* ---------- async function getProducts() {
   const { rows } = await q('select * from products order by name');
   return rows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
+}---------- */
+async function getProducts() {
+  const { rows } = await q('select * from products order by name');
+  // Ensure rows is always an array before mapping
+  const safeRows = rows || [];
+  return safeRows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
 }
 async function getRiders() {
   const { rows } = await q("select rid,name,phone,last_seen from staff where role='delivery' and active order by name");
   return rows.map(r => ({ id: r.rid, name: r.name, phone: r.phone, online: Number(r.last_seen) > Date.now() - ONLINE_MS }));
 }
+
 async function placeOrder(o) {
   const name = String(o.name || '').trim(), contact = normPhone(o.contact), address = String(o.address || '').trim();
   const method = o.method, cart = o.cart, email = String(o.email || '').trim().toLowerCase();
