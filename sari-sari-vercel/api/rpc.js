@@ -6,6 +6,7 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').toLowerCase().split(',').m
 const MARKUP = Number(process.env.MARKUP || 1);
 const CODE_MIN = 10, SESSION_DAYS = 7, ONLINE_MS = 90000;
 const STORE_ROLES = ['admin', 'cashier'];
+const DELIVERY_ENABLED = process.env.DELIVERY_ENABLED === '1'; // delivery is paused until you set this to 1 in Vercel
 
 /* Tables are created automatically the first time the API runs (safe to run again). */
 const SCHEMA = `
@@ -21,7 +22,16 @@ create index if not exists orders_contact_idx on orders (contact);
 create table if not exists admin_codes (email text primary key, code text not null, expires bigint not null);
 create table if not exists sessions (token text primary key, email text not null, expires bigint not null);
 create table if not exists staff (email text primary key, rid text unique not null, name text not null, role text not null,
-  phone text not null default '', pass text not null, active boolean not null default true, last_seen bigint not null default 0);`;
+  phone text not null default '', pass text not null, active boolean not null default true, last_seen bigint not null default 0);
+alter table products add column if not exists barcode text not null default '';
+create index if not exists products_barcode_idx on products (barcode);
+create table if not exists store_sessions (id serial primary key, opened_at timestamptz not null default now(), opened_by text not null,
+  start_amount numeric not null, closed_at timestamptz, closed_by text, end_amount numeric);
+create table if not exists cash_entries (id serial primary key, session_id int not null, created timestamptz not null default now(),
+  kind text not null, method text not null default 'Cash', amount numeric not null check (amount > 0), ref text not null default '',
+  status text not null default 'Done', by_email text not null default '', released_at timestamptz);
+create table if not exists pos_sales (id text primary key, session_id int, created timestamptz not null default now(), by_email text not null,
+  items jsonb not null, total numeric not null, cash numeric);`;
 
 let pool, ready;
 const getPool = () => pool || (pool = new (require('pg').Pool)({
@@ -100,7 +110,8 @@ async function createSession(email, role, name) {
   await q('delete from sessions where expires < $1', [Date.now()]);
   return { token, role, email, name };
 }
-const prod = r => ({ id: r.id, name: r.name, category: r.category, price: Number(r.price), stock: r.stock, image: r.image,
+const currentSession = async () => (await q('select * from store_sessions where closed_at is null order by id desc limit 1')).rows[0];
+const prod = r => ({ barcode: r.barcode || '', id: r.id, name: r.name, category: r.category, price: Number(r.price), stock: r.stock, image: r.image,
   tags: String(r.tags || '').split(',').map(t => t.trim()).filter(Boolean) });
 async function riderMap() {
   const { rows } = await q("select rid,name,phone from staff where role='delivery'");
@@ -149,7 +160,7 @@ async function signOut(token) {
 
 /* ---------- Customer (no login) ---------- */
 async function getInfo() {
-  return { name: STORE_NAME, address: STORE_ADDRESS, cloud: process.env.CLOUDINARY_CLOUD || '', preset: process.env.CLOUDINARY_PRESET || '', emailCodes: emailOn() };
+  return { name: STORE_NAME, address: STORE_ADDRESS, cloud: process.env.CLOUDINARY_CLOUD || '', preset: process.env.CLOUDINARY_PRESET || '', emailCodes: emailOn(), open: !!(await currentSession()), delivery: DELIVERY_ENABLED, qr: process.env.STORE_QR_URL || '' };
 }
 async function getProducts() {
   const { rows } = await q('select * from products order by name');
@@ -166,8 +177,10 @@ async function placeOrder(o) {
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new E('Enter a valid email address or leave it blank.');
   if (!/^09\d{9}$/.test(contact)) throw new E('Enter your mobile number as 09XXXXXXXXX (11 digits).');
   if (method !== 'Pickup' && method !== 'Delivery') throw new E('Choose pickup or delivery.');
+  if (method === 'Delivery' && !DELIVERY_ENABLED) throw new E('Delivery will be available soon. Please choose pickup for now.');
   if (method === 'Delivery' && address.length < 5) throw new E('Please enter your full delivery address.');
   if (!Array.isArray(cart) || !cart.length || cart.length > 40) throw new E('Your cart is empty.');
+  if (!(await currentSession())) throw new E('The store is closed right now. Please try again when we are open.');
   const recent = await q("select 1 from orders where contact=$1 and created > now() - interval '20 seconds'", [contact]);
   if (recent.rowCount) throw new E('Please wait a few seconds before placing another order.');
   let rider = '';
@@ -271,13 +284,18 @@ async function adminSaveProduct(token, p) {
     .filter((t, i, a) => t && a.indexOf(t) === i).slice(0, 15).join(',');
   const img = String(p.image == null ? '__keep' : p.image);
   if (img !== '' && img !== '__keep' && (!/^https:\/\/res\.cloudinary\.com\/\S+$/.test(img) || img.length > 500)) throw new E('Image link is invalid. Please upload the image again.');
+  const barcode = String(p.barcode || '').trim().slice(0, 64);
+  if (barcode) {
+    const d = await q('select name from products where barcode=$1 and id <> $2', [barcode, String(p.id || '')]);
+    if (d.rows[0]) throw new E(`That barcode is already used by ${d.rows[0].name}.`);
+  }
   if (p.id) {
-    const r = await q('update products set name=$1, category=$2, price=$3, stock=$4, tags=$5, image = case when $6 = $7 then image else $6 end where id=$8',
-      [name, category, price, stock, tags, img, '__keep', p.id]);
+    const r = await q('update products set name=$1, category=$2, price=$3, stock=$4, tags=$5, image = case when $6 = $7 then image else $6 end, barcode=$9 where id=$8',
+      [name, category, price, stock, tags, img, '__keep', p.id, barcode]);
     if (!r.rowCount) throw new E('Product not found.');
   } else {
-    await q('insert into products(id,name,category,price,stock,tags,image) values ($1,$2,$3,$4,$5,$6,$7)',
-      ['P' + Date.now(), name, category, price, stock, tags, img === '__keep' ? '' : img]);
+    await q('insert into products(id,name,category,price,stock,tags,image,barcode) values ($1,$2,$3,$4,$5,$6,$7,$8)',
+      ['P' + Date.now(), name, category, price, stock, tags, img === '__keep' ? '' : img, barcode]);
   }
   return true;
 }
@@ -383,10 +401,97 @@ async function adminPurgeOld(token) {
   return { deleted: r.rowCount };
 }
 
+/* ---------- Open / close the store, cash in/out, POS (owner + cashier) ---------- */
+async function cashTotals(s) {
+  const { rows: e } = await q('select * from cash_entries where session_id=$1 order by id desc', [s.id]);
+  const sum = f => e.filter(f).reduce((t, r) => t + Number(r.amount), 0);
+  const inCash = sum(r => r.kind === 'in' && r.status === 'Done' && r.method === 'Cash'), inQr = sum(r => r.kind === 'in' && r.status === 'Done' && r.method === 'QR');
+  const outReleased = sum(r => r.kind === 'out' && r.status === 'Released'), outPending = sum(r => r.kind === 'out' && r.status === 'Pending');
+  const pos = (await q('select count(*)::int n, coalesce(sum(total),0) t from pos_sales where session_id=$1', [s.id])).rows[0];
+  return { entries: e, totals: { inCash, inQr, inTotal: inCash + inQr, outReleased, outPending, posTotal: Number(pos.t), posCount: pos.n,
+    balance: Number(s.start_amount) + inCash + inQr - outReleased } };
+}
+async function adminStoreState(token) {
+  await auth(token, STORE_ROLES);
+  const s = await currentSession();
+  const last = (await q('select end_amount from store_sessions where closed_at is not null order by id desc limit 1')).rows[0];
+  const lastEnd = last ? Number(last.end_amount) : null;
+  if (!s) return { open: false, lastEnd };
+  const { entries, totals } = await cashTotals(s);
+  return { open: true, lastEnd, session: { id: s.id, openedAt: new Date(s.opened_at).toISOString(), startAmount: Number(s.start_amount) }, totals,
+    entries: entries.map(r => ({ id: r.id, created: new Date(r.created).toISOString(), kind: r.kind, method: r.method, amount: Number(r.amount), ref: r.ref, status: r.status, by: r.by_email })) };
+}
+async function adminStoreOpen(token, startAmount) {
+  const a = await auth(token, STORE_ROLES);
+  if (await currentSession()) throw new E('The store is already open.');
+  const amt = Number(startAmount);
+  if (!(amt >= 0) || amt > 10000000) throw new E('Enter the starting money (0 or more).');
+  await q('insert into store_sessions(opened_by,start_amount) values ($1,$2)', [a.email, amt]);
+  return { open: true };
+}
+async function adminStoreClose(token) {
+  const a = await auth(token, STORE_ROLES);
+  const s = await currentSession(); if (!s) throw new E('The store is already closed.');
+  const { totals } = await cashTotals(s);
+  if (totals.outPending > 0) throw new E('There are pending cash-outs. Mark them as released or cancel them before closing.');
+  await q('update store_sessions set closed_at=now(), closed_by=$1, end_amount=$2 where id=$3', [a.email, totals.balance, s.id]);
+  return { endAmount: totals.balance, posTotal: totals.posTotal };
+}
+async function adminCashAdd(token, kind, method, amount, ref) {
+  const a = await auth(token, STORE_ROLES);
+  const s = await currentSession(); if (!s) throw new E('Open the store first.');
+  const amt = Number(amount);
+  if (!['in', 'out'].includes(kind)) throw new E('Choose cash in or cash out.');
+  if (!(amt > 0) || amt > 1000000) throw new E('Enter an amount greater than 0.');
+  const m = kind === 'in' ? (method === 'QR' ? 'QR' : 'Cash') : 'Cash';
+  await q('insert into cash_entries(session_id,kind,method,amount,ref,status,by_email) values ($1,$2,$3,$4,$5,$6,$7)',
+    [s.id, kind, m, amt, String(ref || '').slice(0, 80), kind === 'in' ? 'Done' : 'Pending', a.email]);
+  return true;
+}
+async function adminCashRelease(token, id) {
+  await auth(token, STORE_ROLES);
+  const s = await currentSession(); if (!s) throw new E('Open the store first.');
+  const u = await q("update cash_entries set status='Released', released_at=now() where id=$1 and session_id=$2 and kind='out' and status='Pending'", [Number(id), s.id]);
+  if (!u.rowCount) throw new E('This cash-out cannot be released.');
+  return true;
+}
+async function adminCashCancel(token, id) {
+  await auth(token, STORE_ROLES);
+  const s = await currentSession(); if (!s) throw new E('Open the store first.');
+  const u = await q("update cash_entries set status='Cancelled' where id=$1 and session_id=$2 and kind='out' and status='Pending'", [Number(id), s.id]);
+  if (!u.rowCount) throw new E('This cash-out cannot be cancelled.');
+  return true;
+}
+/* Walk-in sale at the counter: deducts stock at the store (base) price */
+async function posSale(token, items, cash) {
+  const a = await auth(token, STORE_ROLES);
+  const s = await currentSession(); if (!s) throw new E('The store is closed. Open the store first.');
+  if (!Array.isArray(items) || !items.length || items.length > 60) throw new E('The sale is empty.');
+  const id = 'POS-' + newOrderId().slice(4), lines = []; let total = 0;
+  const client = await getPool().connect();
+  try {
+    await client.query('begin');
+    const { rows } = await client.query('select * from products where id = any($1) for update', [items.map(i => String(i.id))]);
+    for (const i of items) {
+      const p = rows.find(x => x.id === i.id), qty = Math.floor(Number(i.qty));
+      if (!p || !(qty >= 1 && qty <= 999)) throw new E('Invalid item in the sale.');
+      if (qty > p.stock) throw new E(`Only ${p.stock} left of ${p.name}.`);
+      lines.push({ id: p.id, name: p.name, price: Number(p.price), qty }); total += Number(p.price) * qty;
+      await client.query('update products set stock = stock - $1 where id = $2', [qty, p.id]);
+    }
+    const c = Number(cash) || 0;
+    if (c && c < total) throw new E('Cash received is less than the total.');
+    await client.query('insert into pos_sales(id,session_id,by_email,items,total,cash) values ($1,$2,$3,$4,$5,$6)', [id, s.id, a.email, JSON.stringify(lines), total, c || null]);
+    await client.query('commit');
+    return { id, total, change: c ? c - total : 0 };
+  } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
+}
+
 const fns = { getInfo, getProducts, getRiders, placeOrder, trackOrder, trackMany, sendCode, verifyCode, loginPassword, signOut,
   adminGetOrders, adminPoll, adminReviewOrder, adminAssignRider, adminGetProducts, adminSaveProduct, adminDeleteProduct,
   adminListStaff, adminSaveStaff, adminDeleteStaff, riderOrders, riderPoll, riderRespond,
-  adminTestEmail, adminReport, adminStorage, adminPurgeOld };
+  adminTestEmail, adminReport, adminStorage, adminPurgeOld,
+  adminStoreState, adminStoreOpen, adminStoreClose, adminCashAdd, adminCashRelease, adminCashCancel, posSale };
 
 module.exports = async (req, res) => {
   try {
