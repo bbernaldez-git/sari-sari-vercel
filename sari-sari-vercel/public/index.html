@@ -37,6 +37,10 @@ label{display:block;font-weight:600;margin:10px 0 4px}
 .rider{border:2px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}.rider.sel{border-color:var(--blue);background:#eef4ff}
 .links{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.lk{display:inline-block;padding:4px 10px;border-radius:99px;background:#e3ebf8;color:var(--blue);font-size:.82rem;font-weight:600;text-decoration:none}
 .Requested{background:#8a6d00}.Accepted{background:var(--blue)}.Delivered{background:var(--leaf)}.Declined{background:var(--chili)}
+#storeBar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;background:#fff;border:2px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+#bnA.many button{font-size:.68rem;padding:8px 2px}#bnA.many button b{font-size:1.1rem}
+#scVideo{width:100%;max-height:60vh;background:#000;border-radius:8px}
+.pos-res button{display:block;width:100%;text-align:left;margin:4px 0}
 .hide{display:none!important}
 /* fixed bottom navigation */
 .bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
@@ -106,6 +110,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <button class="hd hide" id="out" onclick="signOut()">Sign out</button>
 </header>
 <main>
+  <div id="storeBar" class="hide"></div>
+  <div id="closedBar" class="msg err hide">🔴 The store is closed right now. You can browse and fill your cart, but you can only place an order when the store is open.</div>
   <div id="msg"></div>
 
   <!-- Customer: shop -->
@@ -141,7 +147,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
       <label for="cEmail">Email address <span class="muted">(optional – we'll send a copy of your order)</span></label>
       <input id="cEmail" type="email" autocomplete="email" placeholder="you@example.com">
       <label for="cMethod">Pickup or delivery? *</label>
-      <select id="cMethod" onchange="toggleAddr()"><option value="Pickup">Pickup at the store</option><option value="Delivery">Deliver to me</option></select>
+      <select id="cMethod" onchange="toggleAddr()"><option value="Pickup">Pickup at the store</option><option value="Delivery" disabled>Delivery – coming soon</option></select>
+      <p class="muted" id="delSoon">🛵 Delivery will be available soon. For now, please pick up at the store.</p>
       <p class="muted" id="pickAddr"></p>
       <div id="addrBox" class="hide"><label for="cAddr">Delivery address *</label>
         <textarea id="cAddr" rows="2" autocomplete="street-address" placeholder="House no., street, barangay, city"></textarea></div>
@@ -196,6 +203,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <div id="aProducts" class="v hide"></div>
   <div id="aStaff" class="v hide"></div>
   <div id="aReports" class="v hide"></div>
+  <div id="aPos" class="v hide"></div>
+  <div id="aCash" class="v hide"></div>
   <div id="rDeliveries" class="v hide"></div>
   <p class="muted" style="text-align:center;margin-top:24px">📍 <span class="stName">Jeriel Store</span> · <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></p>
 </main>
@@ -216,6 +225,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <h2 id="pdTitle">Product</h2>
   <div id="pErr"></div>
   <label for="pName">Product name</label><input id="pName" onblur="autoTags()">
+  <label for="pBar">Barcode <span class="muted">(optional, used by POS)</span></label>
+  <div class="row" style="flex-wrap:nowrap"><input id="pBar" inputmode="numeric" autocomplete="off"><button class="alt" onclick="openScan(c => { $('pBar').value = c; return 'Got ' + c; }, true)">📷 Scan</button></div>
   <label>Product image</label>
   <div class="row" style="justify-content:flex-start"><div class="pimg thumb" id="pPrev" style="width:80px;height:80px"></div>
     <div style="flex:1;min-width:180px"><input type="file" id="pFile" accept="image/*" onchange="pickImg(this)">
@@ -245,22 +256,38 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" id="sActive" checked style="width:auto"> Active (can sign in)</label>
   <p class="row"><button class="alt" onclick="$('sd').close()">Cancel</button><button class="go" id="sSave" onclick="saveStaff()">Save</button></p>
 </dialog>
+<dialog id="od" aria-labelledby="odTitle">
+  <h2 id="odTitle">Open the store</h2>
+  <label for="odAmt">Starting money (₱)</label><input id="odAmt" type="number" min="0" step="1">
+  <p class="muted" id="odNote"></p>
+  <p class="row"><button class="alt" onclick="$('od').close()">Cancel</button><button class="go" id="odBtn" onclick="openStore()">Open store</button></p>
+</dialog>
+<dialog id="sc" onclose="closeScan()" aria-labelledby="scTitle">
+  <h2 id="scTitle">Scan barcode</h2>
+  <video id="scVideo" playsinline muted></video>
+  <p class="muted" id="scMsg"></p>
+  <p><button class="alt full" onclick="closeScan()">Done</button></p>
+</dialog>
 <script>
 let S = null, products = [], cart = {}, cat = 'All', q = '', lim = 40, tm, cur = 'shop', sideOpen = innerWidth > 700, unseen = 0;
-let riders = [], riderSel = '', CLD = {cloud:'', preset:''}, imgChanged = false, adm = [], aq = '', tags = [], img = '', aData = [], aFilter = 'Pending', oq = '', known = null, pollT, audioCtx;
+let OPEN = true, DELIVERY_ON = false, QR = '', ST = {open:false}, posCart = {}, scStop = null, scCb = null, scOnce = false, scLast = '', scLastT = 0, riders = [], riderSel = '', CLD = {cloud:'', preset:''}, imgChanged = false, adm = [], aq = '', tags = [], img = '', aData = [], aFilter = 'Pending', oq = '', known = null, pollT, audioCtx;
 const $ = id => document.getElementById(id);
 let ADDR = '743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan', STORE = 'Jeriel Store';
 const peso = n => '₱' + Number(n).toLocaleString('en-PH');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const api = async (fn, ...a) => {
-  let r;
-  try { r = fn === 'getProducts' ? await fetch('/api/rpc?fn=getProducts') : await fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})}); }
+  const post = () => fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})});
+  let r, j;
+  try { r = fn === 'getProducts' ? await fetch('/api/rpc?fn=getProducts') : await post(); }
   catch(e){ throw new Error('Cannot reach the server. Check your internet connection.'); }
-  const j = await r.json().catch(() => null);
+  j = await r.json().catch(() => null);
+  if(fn === 'getProducts' && !(r.ok && j && Array.isArray(j.result))){ /* cached copy unavailable: ask the server directly */
+    try { r = await post(); j = await r.json().catch(() => null); } catch(e){ throw new Error('Cannot reach the server. Check your internet connection.'); } }
   if(!r.ok) throw new Error(j && j.error ? j.error + (j.detail ? ' (' + j.detail + ')' : '') :
     r.status === 404 ? 'Server function not found (HTTP 404). In Vercel, check the project Root Directory.' :
     'Server error (HTTP ' + r.status + '). Open your-site/api/rpc to see what is wrong.');
+  if(!j || j.result === undefined) throw new Error('The server sent an unexpected reply. Make sure api/rpc.js is the latest version and redeploy.');
   return j.result; };
 const fmt = d => new Date(d).toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'});
 const store = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
@@ -301,7 +328,7 @@ function home(){ view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 's
 function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; applySide();
   document.querySelectorAll('.v').forEach(x => x.classList.toggle('hide', x.id!==v));
   document.querySelectorAll('.bn button').forEach(b => b.classList.toggle('on', b.dataset.v===v));
-  ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts, aStaff:loadStaff, aReports:loadReports, rDeliveries:loadRider})[v]?.();
+  ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts, aStaff:loadStaff, aReports:loadReports, aPos:loadPos, aCash:loadCash, rDeliveries:loadRider})[v]?.();
   updateCart(); window.scrollTo(0,0); }
 
 /* ----- Shop: cached list + prebuilt search index, refreshed in background ----- */
@@ -375,6 +402,7 @@ function drawRiders(){ const on = riders.filter(r => r.online);
 function pickRider(id){ riderSel = riderSel===id ? '' : id; drawRiders(); }
 setInterval(() => { if(cur==='cart' && $('cMethod').value==='Delivery') loadRiders(); }, 20000);
 function checkout(){
+  if(!OPEN) return show('The store is closed right now. Please try again when we are open.');
   const del = $('cMethod').value==='Delivery';
   const o = {name:$('cName').value, contact:$('cPhone').value, email:$('cEmail').value, method:$('cMethod').value, address:$('cAddr').value, note:$('cNote').value,
     rider: del ? riderSel : '', cart:Object.keys(cart).map(id => ({id, qty:cart[id]}))};
@@ -387,7 +415,7 @@ function checkout(){
     $('dId').textContent = r.orderId; $('dTotal').textContent = peso(r.total);
     $('dAddr').textContent = o.method==='Pickup' ? '📍 ' + pickup() : 'We will deliver to: ' + o.address + (rname ? '. ' + rname + ' must accept your delivery. You will be notified here.' : '. The store will assign a rider.');
     $('dMail').textContent = o.email.trim() ? 'If email is set up for the store, a copy goes to ' + o.email.trim() + '.' : '';
-    view('done'); }, $('place')); }
+    view('done'); }, $('place')).then(() => { $('place').disabled = !OPEN; }); }
 
 /* ----- My orders (30 days), tracking and customer notifications ----- */
 const myOrders = () => (lload('sariOrders') || []).filter(o => Date.now() - o.t < 30*864e5);
@@ -455,16 +483,18 @@ function verify(){ run(async () => { S = await api('verifyCode', $('lEmail').val
 function loginPw(){ run(async () => { S = await api('loginPassword', $('lEmail').value, $('lPw').value); store('sariA', S); startAdmin(); }, $('codeBtn')); }
 async function signOut(){ try { await api('signOut', S.token); } catch(e){} store('sariA', null); location.reload(); }
 const MENUS = {
-  admin: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory'], ['aReports','📊','Reports'], ['aStaff','👥','Staff']],
-  cashier: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory']],
+  admin: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory'], ['aPos','🧾','POS'], ['aCash','💵','Cash'], ['aReports','📊','Reports'], ['aStaff','👥','Staff']],
+  cashier: [['aOrders','📋','Orders'], ['aProducts','🏷️','Inventory'], ['aPos','🧾','POS'], ['aCash','💵','Cash']],
   delivery: [['rDeliveries','🛵','Deliveries']] };
 function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove('hide'); $('out').classList.remove('hide');
   $('who').textContent = (S.name || 'Staff') + ' · ' + S.role + ' · 🟢 online'; $('who').classList.remove('hide');
   $('bnA').innerHTML = (MENUS[S.role] || MENUS.cashier).map((m, i) => `<button data-v="${m[0]}" onclick="view('${m[0]}')"><b>${m[1]}</b><span ${i===0?'id="ordLbl"':''}>${m[2]}</span></button>`).join('');
+  $('bnA').classList.toggle('many', (MENUS[S.role] || []).length > 4); drawStoreBar(); refreshStore();
   view(S.role==='delivery' ? 'rDeliveries' : 'aOrders');
   try { Notification.requestPermission(); } catch(e){}
   poll(); pollT = setInterval(poll, 20000); }
 async function poll(){ /* also keeps this person marked online */
+  if(S.role !== 'delivery') refreshStore();
   try { const rider = S.role==='delivery', l = await api(rider ? 'riderPoll' : 'adminPoll', S.token), ids = l.map(o => o.id);
     const fresh = known ? l.filter(o => !known.includes(o.id)) : []; known = ids;
     $('ordLbl').textContent = rider ? (ids.length ? `Deliveries (${ids.length} new)` : 'Deliveries') : (ids.length ? `Orders (${ids.length} pending)` : 'Orders');
@@ -520,7 +550,7 @@ function editProd(id){
   const p = adm.find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[]};
   $('pdTitle').textContent = id ? 'Edit product' : 'Add product'; $('pErr').innerHTML = ''; $('pd').dataset.id = id || '';
   img = p.image || ''; imgChanged = false; showPrev(); $('pFile').value = ''; $('pUp').textContent = '';
-  $('pName').value = p.name; $('pPrice').value = p.price; $('pStock').value = p.stock; $('tagIn').value = ''; tags = [...p.tags]; drawTags();
+  $('pName').value = p.name; $('pBar').value = p.barcode || ''; $('pPrice').value = p.price; $('pStock').value = p.stock; $('tagIn').value = ''; tags = [...p.tags]; drawTags();
   $('pCat').innerHTML = cats().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__new">+ New category…</option>';
   $('pCat').value = p.category || (cats()[0] || '__new');
   $('pNewCat').value = ''; $('pNewCat').classList.toggle('hide', $('pCat').value!=='__new');
@@ -550,7 +580,7 @@ function autoTags(){ if(!tags.length) addTags($('pName').value.replace(/[^\w\s]/
 async function saveProd(){
   addTags($('tagIn').value); $('tagIn').value = '';
   const sel = $('pCat').value, category = sel==='__new' ? $('pNewCat').value.trim() : sel;
-  const p = {id:$('pd').dataset.id, name:$('pName').value, category, price:parseFloat($('pPrice').value), stock:parseInt($('pStock').value,10), tags, image: imgChanged ? img : '__keep'};
+  const p = {id:$('pd').dataset.id, name:$('pName').value, category, price:parseFloat($('pPrice').value), stock:parseInt($('pStock').value,10), tags, barcode: $('pBar').value.trim(), image: imgChanged ? img : '__keep'};
   $('pSave').disabled = true;
   try { await api('adminSaveProduct', S.token, p); $('pd').close(); sessionStorage.removeItem('sariP');
     await loadAdminProducts(); show('Saved ' + p.name + '.', 'ok');
@@ -627,6 +657,113 @@ function dlOld(btn){ run(async () => { const c = new Date(manila().getTime() - 6
 function purgeOld(btn){ if(!confirm('Delete all orders older than 2 months from the database? Make sure you downloaded the CSV. This cannot be undone.')) return;
   run(async () => { const r = await api('adminPurgeOld', S.token); await loadReports(); show(r.deleted + ' old order(s) deleted.', 'ok'); }, btn); }
 
+/* ----- Store open / closed ----- */
+function applyInfo(i){ OPEN = !!i.open; DELIVERY_ON = !!i.delivery; QR = i.qr || ''; ST.open = OPEN;
+  $('closedBar').classList.toggle('hide', OPEN || !!S); if(S) drawStoreBar();
+  const op = $('cMethod').querySelector('option[value=Delivery]'); op.disabled = !DELIVERY_ON; op.textContent = DELIVERY_ON ? 'Deliver to me' : 'Delivery – coming soon';
+  $('delSoon').classList.toggle('hide', DELIVERY_ON);
+  if(!DELIVERY_ON && $('cMethod').value === 'Delivery'){ $('cMethod').value = 'Pickup'; toggleAddr(); }
+  const b = $('place'); b.disabled = !OPEN; b.textContent = OPEN ? 'Place order' : 'Store is closed'; }
+setInterval(() => { if(!S) api('getInfo').then(applyInfo).catch(() => {}); }, 30000);
+function drawStoreBar(){ const b = $('storeBar'); if(!S || S.role === 'delivery'){ b.classList.add('hide'); return; } b.classList.remove('hide');
+  b.innerHTML = ST.open ? '<span>🟢 <b>Store is OPEN</b></span><button class="alt del" onclick="closeStore(this)">Close store</button>'
+    : '<span>🔴 <b>Store is CLOSED</b> · customers cannot order</span><button class="go" onclick="openStoreDlg(this)">Open store</button>'; }
+async function refreshStore(){ try { const i = await api('getInfo'); if(!!i.open !== ST.open){ ST.open = !!i.open; drawStoreBar(); } } catch(e){} }
+function openStoreDlg(btn){ run(async () => { const st = await api('adminStoreState', S.token); if(st.open){ ST.open = true; drawStoreBar(); return; }
+  $('odAmt').value = st.lastEnd != null ? st.lastEnd : 0; $('odNote').textContent = st.lastEnd != null ? 'Suggested: the money you closed with last time. Change it if the count is different.' : 'Count the cash in the drawer and enter it.';
+  $('od').showModal(); $('odAmt').focus(); }, btn); }
+async function openStore(){ $('odBtn').disabled = true;
+  try { await api('adminStoreOpen', S.token, parseFloat($('odAmt').value)); $('od').close(); ST.open = true; drawStoreBar(); show('Store is open. Customers can order now.', 'ok'); if(cur==='aCash' || cur==='aPos') view(cur); }
+  catch(e){ $('odNote').textContent = e.message || String(e); }
+  $('odBtn').disabled = false; }
+function closeStore(btn){ if(!confirm('Close the store? Customers will not be able to place orders.')) return;
+  run(async () => { const r = await api('adminStoreClose', S.token); ST.open = false; drawStoreBar(); if(cur==='aCash' || cur==='aPos') view(cur); show('Store closed. Closing money: ' + peso(r.endAmount) + '.', 'ok'); }, btn); }
+
+/* ----- Barcode scanner (phone camera; also works with a USB/Bluetooth scanner typing into the box) ----- */
+function loadZx(){ return window.ZXing ? Promise.resolve() : new Promise((ok, no) => { const t = document.createElement('script');
+  t.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; t.onload = ok; t.onerror = no; document.head.appendChild(t); }); }
+function scHit(code){ const now = Date.now(); if(code === scLast && now - scLastT < 2000) return; scLast = code; scLastT = now; beep();
+  const msg = scCb ? scCb(code) : ''; $('scMsg').textContent = msg || ('Scanned ' + code); if(scOnce) setTimeout(closeScan, 600); }
+async function openScan(cb, once){ scCb = cb; scOnce = !!once; scLast = ''; $('scMsg').textContent = 'Starting camera…'; $('sc').showModal();
+  try {
+    if('BarcodeDetector' in window){
+      const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
+      const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false}), v = $('scVideo'); v.srcObject = stream; await v.play();
+      let on = true; scStop = () => { on = false; stream.getTracks().forEach(t => t.stop()); v.srcObject = null; };
+      $('scMsg').textContent = 'Point the camera at a barcode.';
+      const tick = async () => { if(!on) return; try { const r = await det.detect(v); if(r.length) scHit(r[0].rawValue); } catch(e){} setTimeout(tick, 250); }; tick();
+    } else {
+      await loadZx(); const zr = new ZXing.BrowserMultiFormatReader(); scStop = () => { try { zr.reset(); } catch(e){} };
+      await zr.decodeFromConstraints({video:{facingMode:'environment'}}, $('scVideo'), res => { if(res) scHit(res.getText()); });
+      $('scMsg').textContent = 'Point the camera at a barcode.';
+    }
+  } catch(e){ $('scMsg').textContent = 'Camera not available. Allow camera access (the site must be opened with https) or type the barcode instead.'; } }
+function closeScan(){ if(scStop){ scStop(); scStop = null; } if($('sc').open) $('sc').close(); }
+
+/* ----- POS (walk-in sales; deducts stock) ----- */
+const posMatches = v => { const t = norm(v).split(/\s+/).filter(Boolean); return adm.filter(p => { const x = norm([p.name, p.category, p.barcode, ...p.tags].join(' ')); return t.every(w => x.includes(w)); }).slice(0, 6); };
+function loadPos(){
+  $('aPos').innerHTML = `<h2>POS</h2><p class="muted" id="posNote"></p>
+  <div class="row" style="flex-wrap:nowrap;margin-top:8px"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
+    <button onclick="openScan(posScanned, false)">📷 Scan</button></div>
+  <div id="posRes" class="pos-res"></div>
+  <div class="card" style="margin-top:10px"><div id="posLines"></div><div class="row" style="margin-top:8px"><b id="posTot"></b><button class="alt del" onclick="posReset()">Clear</button></div>
+    <div class="two"><div><label for="posCash">Cash received (optional)</label><input id="posCash" type="number" min="0" oninput="posTotals()"></div><div><label>Change</label><b id="posChg" style="display:block;padding-top:10px"></b></div></div>
+    <p><button class="go full" id="posGo" onclick="posPay(this)">Complete sale and deduct stock</button></p></div>`;
+  return run(async () => { adm = await api('adminGetProducts', S.token); posDraw(); const i = $('posIn'); if(i) i.focus(); }); }
+function posSearch(){ const v = $('posIn').value; $('posX').classList.toggle('hide', !v); const f = v.trim() ? posMatches(v) : [];
+  $('posRes').innerHTML = f.map(p => `<button class="alt" onclick="posAdd('${p.id}');posClear()">${esc(p.name)} · ${peso(p.price)} · ${p.stock} left</button>`).join(''); }
+function posClear(){ $('posIn').value = ''; $('posX').classList.add('hide'); $('posRes').innerHTML = ''; $('posIn').focus(); }
+function posKey(e){ if(e.key !== 'Enter') return; e.preventDefault(); const v = $('posIn').value.trim(); if(!v) return;
+  const hit = adm.find(p => p.barcode && p.barcode === v) || (posMatches(v).length === 1 ? posMatches(v)[0] : null);
+  if(hit){ const m = posAdd(hit.id); posClear(); if(m && m.indexOf('Only') === 0) show(m); } else show('No product found for "' + v + '". Add its barcode in Inventory.'); }
+function posScanned(code){ const p = adm.find(x => x.barcode && x.barcode === code); return p ? posAdd(p.id) : 'No product with barcode ' + code + '. Add it in Inventory.'; }
+function posAdd(id){ const p = adm.find(x => x.id === id); if(!p) return ''; const n = (posCart[id] || 0) + 1;
+  if(n > p.stock) return 'Only ' + p.stock + ' of ' + p.name + ' in stock'; posCart[id] = n; posDraw(); return 'Added ' + p.name + ' (' + n + ')'; }
+function posQty(id, d){ const p = adm.find(x => x.id === id), n = (posCart[id] || 0) + d; if(n <= 0) delete posCart[id]; else if(n <= p.stock) posCart[id] = n; posDraw(); }
+function posReset(){ posCart = {}; if($('posCash')) $('posCash').value = ''; posDraw(); }
+const posTotal = () => Object.keys(posCart).reduce((t, id) => { const p = adm.find(x => x.id === id); return t + (p ? p.price * posCart[id] : 0); }, 0);
+function posTotals(){ const t = posTotal(), c = parseFloat($('posCash').value) || 0; $('posTot').textContent = 'Total: ' + peso(t); $('posChg').textContent = c ? (c >= t ? peso(c - t) : 'Short ' + peso(t - c)) : ''; }
+function posDraw(){ if(!$('posLines')) return; const ids = Object.keys(posCart);
+  $('posLines').innerHTML = ids.length ? ids.map(id => { const p = adm.find(x => x.id === id); if(!p) return '';
+    return `<div class="line"><div><b>${esc(p.name)}</b><div class="muted">${peso(p.price)} each${p.barcode ? ' · ' + esc(p.barcode) : ''}</div></div>
+      <div class="qty"><button class="alt" onclick="posQty('${id}',-1)">−</button><b>${posCart[id]}</b><button onclick="posQty('${id}',1)">+</button></div><div>${peso(p.price*posCart[id])}</div></div>`; }).join('')
+    : '<p class="muted">Scan a barcode or search for a product to start a sale.</p>';
+  $('posNote').textContent = ST.open ? 'Walk-in sales use the store price (no online +₱1).' : 'The store is closed. Open the store (top bar) to make sales.';
+  $('posGo').disabled = !ids.length || !ST.open; posTotals(); }
+function posPay(btn){ const items = Object.keys(posCart).map(id => ({id, qty:posCart[id]})), c = parseFloat($('posCash').value) || 0;
+  run(async () => { const r = await api('posSale', S.token, items, c); posCart = {}; $('posCash').value = ''; adm = await api('adminGetProducts', S.token); posDraw();
+    show('Sale ' + r.id + ' recorded: ' + peso(r.total) + (r.change ? ' · change ' + peso(r.change) : '') + '. Stock updated.', 'ok'); }, btn); }
+
+/* ----- Cash in / cash out ----- */
+function loadCash(){ return run(async () => { const st = await api('adminStoreState', S.token); ST.open = st.open; drawStoreBar(); drawCash(st); }); }
+function drawCash(st){ let h = '<h2>Cash in / out</h2>';
+  if(!st.open){ $('aCash').innerHTML = h + `<div class="card" style="margin-top:10px"><p>The store is closed. Open the store to record cash in and cash out.</p>${st.lastEnd != null ? `<p class="muted">Last closing money: ${peso(st.lastEnd)}</p>` : ''}<button class="go" onclick="openStoreDlg(this)">Open store</button></div>`; return; }
+  const t = st.totals;
+  h += `<div class="card" style="margin-top:10px"><div class="two"><div><div class="muted">Starting money</div><b style="font-size:1.2rem">${peso(st.session.startAmount)}</b></div>
+    <div><div class="muted">Current balance</div><b style="font-size:1.4rem;color:var(--blue)">${peso(t.balance)}</b></div></div>
+    <p class="muted" style="margin-top:8px">+ Cash in ${peso(t.inTotal)} (cash ${peso(t.inCash)} · QR ${peso(t.inQr)}) · − Released cash out ${peso(t.outReleased)}${t.outPending ? ' · ⏳ pending cash out ' + peso(t.outPending) : ''}<br>POS sales this session: ${peso(t.posTotal)} (${t.posCount})</p></div>
+  <div class="card" style="margin-top:12px"><h3>Cash in</h3>
+    <div class="two"><div><label for="ciMethod">How</label><select id="ciMethod" onchange="$('qrBox').classList.toggle('hide', this.value !== 'QR')"><option value="Cash">Cash</option><option value="QR">Scan QR</option></select></div>
+    <div><label for="ciAmt">Amount (₱)</label><input id="ciAmt" type="number" min="1" step="1"></div></div>
+    <div id="qrBox" class="hide" style="text-align:center;margin-top:8px">${QR ? `<img src="${esc(QR)}" alt="Store QR code" style="max-width:240px;width:100%">` : '<p class="muted">No QR image yet. Add its link as STORE_QR_URL in Vercel to show it here.</p>'}</div>
+    <label for="ciRef">Name or reference (optional)</label><input id="ciRef" maxlength="80">
+    <p><button class="go full" onclick="cashAdd('in', this)">Record cash in</button></p></div>
+  <div class="card" style="margin-top:12px"><h3>Cash out</h3>
+    <label for="coAmt">Reference amount (₱)</label><input id="coAmt" type="number" min="1" step="1">
+    <label for="coRef">Reference no. or name (optional)</label><input id="coRef" maxlength="80">
+    <p><button class="alt full" onclick="cashAdd('out', this)">Add cash out (pending until released)</button></p>
+    <p class="muted">Money is deducted from the balance only when you press Mark released.</p></div>
+  <div class="card" style="margin-top:12px"><h3>This session</h3>` + (st.entries.length ? st.entries.map(e => `<div class="prow" style="grid-template-columns:1fr auto">
+      <div><b>${e.kind === 'in' ? '＋ Cash in' : '－ Cash out'} ${peso(e.amount)}</b> <span class="badge ${e.status==='Done' || e.status==='Released' ? 'Complete' : e.status==='Pending' ? 'Pending' : 'Incomplete'}">${e.status}</span>
+        <div class="muted">${new Date(e.created).toLocaleTimeString('en-PH', {timeZone:'Asia/Manila', hour:'2-digit', minute:'2-digit'})}${e.kind === 'in' ? ' · ' + (e.method === 'QR' ? 'Scan QR' : 'Cash') : ''}${e.ref ? ' · ' + esc(e.ref) : ''} · ${esc(e.by)}</div></div>
+      <div class="acts">${e.status === 'Pending' ? `<button onclick="cashDo('adminCashRelease',${e.id},this)">Mark released</button><button class="alt del" onclick="cashDo('adminCashCancel',${e.id},this)">Cancel</button>` : ''}</div></div>`).join('') : '<p class="muted">No entries yet.</p>') + '</div>';
+  $('aCash').innerHTML = h; }
+function cashAdd(kind, btn){ const amt = parseFloat($(kind === 'in' ? 'ciAmt' : 'coAmt').value);
+  run(async () => { await api('adminCashAdd', S.token, kind, kind === 'in' ? $('ciMethod').value : 'Cash', amt, $(kind === 'in' ? 'ciRef' : 'coRef').value); await loadCash();
+    show(kind === 'in' ? 'Cash in recorded.' : 'Cash out added. Press Mark released when the cash is handed over.', 'ok'); }, btn); }
+function cashDo(fn, id, btn){ run(async () => { await api(fn, S.token, id); await loadCash(); show(fn === 'adminCashRelease' ? 'Released. The balance was reduced.' : 'Cancelled.', 'ok'); }, btn); }
+
 /* ----- Delivery rider screen ----- */
 function riderCard(o){
   const act = o.deliveryStatus==='Requested' ? `<p class="row"><button class="go" onclick="respond('${o.id}','accept',this)">✓ Accept delivery</button><button class="alt del" onclick="respond('${o.id}','decline',this)">Decline</button></p>
@@ -643,7 +780,7 @@ function loadRider(){ return run(async () => { const l = await api('riderOrders'
 function respond(id, action, btn){ run(async () => { await api('riderRespond', S.token, id, action); await loadRider(); poll(); }, btn); }
 
 /* ----- Start ----- */
-api('getInfo').then(i => { ADDR = i.address; STORE = i.name; CLD = {cloud:i.cloud || '', preset:i.preset || ''};
+api('getInfo').then(i => { ADDR = i.address; STORE = i.name; CLD = {cloud:i.cloud || '', preset:i.preset || ''}; applyInfo(i);
   if(i.emailCodes) $('codeLink').classList.remove('hide');
   document.querySelectorAll('.stName').forEach(e => e.textContent = STORE); document.querySelectorAll('.stAddr').forEach(e => e.textContent = ADDR); toggleAddr(); }).catch(() => {});
 cart = load('sariC') || {};
