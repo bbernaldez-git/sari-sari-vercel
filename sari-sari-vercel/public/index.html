@@ -10,8 +10,14 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
 h1,h2,h3{font-family:'Baloo 2',system-ui,sans-serif;margin:0;line-height:1.1}
-header{background:var(--blue);color:#fff;border-bottom:6px solid var(--mango);padding:10px 16px;display:flex;gap:8px;align-items:center}
-header h1{font-size:1.5rem;color:var(--mango);cursor:pointer}
+header{position:sticky;top:0;z-index:25;background:var(--blue);color:#fff;border-bottom:6px solid var(--mango);padding:8px 16px;display:flex;gap:6px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.hd-brand{flex:1 1 230px;min-width:0}
+.hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.who{font-size:.8rem;opacity:.95}
+.pill{border:0;border-radius:99px;padding:5px 12px;font-weight:700;font-size:.85rem;background:#fff;color:var(--ink);cursor:default}
+.pill.open{background:#dff3e6;color:#1d5a37}.pill.closed{background:#fde5e2;color:#8a1f17}.pill.tap{cursor:pointer}
+@media(max-width:560px){.hd-brand .addr{display:none}.hd-right{width:100%;justify-content:space-between}}
+header h1{font-size:1.4rem;color:var(--mango);cursor:pointer}
 .addr{font-size:.78rem;opacity:.9}
 main{max-width:1060px;margin:0 auto;padding:16px 16px 100px}
 button,input,select,textarea{font:inherit}
@@ -41,6 +47,22 @@ label{display:block;font-weight:600;margin:10px 0 4px}
 #bnA.many button{font-size:.68rem;padding:8px 2px}#bnA.many button b{font-size:1.1rem}
 #scVideo{width:100%;max-height:60vh;background:#000;border-radius:8px}
 .pos-res button{display:block;width:100%;text-align:left;margin:4px 0}
+main.wide{max-width:1400px}
+.pos{display:grid;gap:12px;grid-template-columns:1fr}
+.pos-cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.pcat{white-space:nowrap;background:#fff;color:var(--ink);border:2px solid var(--line);padding:6px 12px;font-weight:600}
+.pcat.on{background:#e3ebf8;border-color:var(--blue);color:var(--blue)}.pcat small{opacity:.65;margin-left:6px}
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-top:10px}
+.ptile{position:relative;background:#fff;color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
+.ptile .pimg{width:100%;margin-bottom:4px}.ptile b{font-size:.85rem;line-height:1.15;max-height:2.3em;overflow:hidden}.ptile .price{font-size:1rem}
+.ptile:disabled{opacity:.45}.ptile small{font-size:.7rem;color:var(--chili)}
+.ptile .qb{position:absolute;top:6px;right:6px;background:var(--blue);color:#fff;border-radius:99px;min-width:24px;padding:0 6px;font-weight:700;font-size:.85rem}
+.pos-panel{display:flex;flex-direction:column;gap:6px}
+.pos-total{background:var(--leaf);color:#fff;text-align:center;border-radius:10px;padding:14px;font-weight:800;font-size:1.3rem;font-family:'Baloo 2',sans-serif}
+.pos-pay{padding:14px;font-size:1.1rem}
+@media(min-width:1000px){.pos{grid-template-columns:170px 1fr 340px;align-items:start}.pos-jump{display:none}
+  .pos-cats{flex-direction:column;overflow-y:auto;position:sticky;top:calc(var(--hh,0px) + 10px);max-height:calc(100vh - var(--hh,0px) - 110px)}
+  .pcat{white-space:normal;text-align:left;display:flex;justify-content:space-between;gap:6px}.pos-panel{position:sticky;top:calc(var(--hh,0px) + 10px)}}
 .hide{display:none!important}
 /* fixed bottom navigation */
 .bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
@@ -48,13 +70,13 @@ label{display:block;font-weight:600;margin:10px 0 4px}
 .bn button b{font-size:1.25rem;line-height:1}
 .bn button.on{background:#e3ebf8;color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
 /* shop */
-.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 4px}
+.bar{position:sticky;top:var(--hh,0px);z-index:5;background:var(--bg);padding:8px 0 4px}
 .sw{position:relative;flex:1;min-width:150px}.sw input{padding-right:42px}
 input[type=search]::-webkit-search-cancel-button{display:none}
 .x{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:28px;height:28px;padding:0;border-radius:50%;background:var(--line);color:var(--ink);font-size:1.15rem;line-height:1}
 .shopwrap{display:flex;gap:14px;align-items:flex-start}
 .shopmain{flex:1;min-width:0}
-#side{width:220px;flex:none;position:sticky;top:78px;max-height:calc(100vh - 190px);overflow:auto}
+#side{width:220px;flex:none;position:sticky;top:calc(var(--hh,0px) + 78px);max-height:calc(100vh - 190px);overflow:auto}
 #side.collapsed{display:none}
 #side h3{margin-bottom:6px}
 .cat{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;color:var(--ink);text-align:left;padding:8px 10px;border-radius:8px;font-weight:500}
@@ -104,10 +126,13 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
 </head>
 <body>
 <script>window.addEventListener('error',function(e){var m=document.getElementById('msg');if(m)m.innerHTML='<div class="msg err">Page error: '+e.message+'. Please refresh.</div>';});</script>
-<header>
-  <div style="flex:1"><h1 onclick="home()" class="stName">Jeriel Store</h1><div class="addr">📍 <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></div></div>
-  <span class="addr hide" id="who"></span>
-  <button class="hd hide" id="out" onclick="signOut()">Sign out</button>
+<header id="top">
+  <div class="hd-brand"><h1 onclick="home()" class="stName">Jeriel Store</h1><div class="addr">📍 <span class="stAddr">743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan</span></div></div>
+  <div class="hd-right">
+    <span class="who hide" id="who"></span>
+    <button class="pill hide" id="stPill" onclick="pillClick()" aria-live="polite"></button>
+    <button class="hd hide" id="out" onclick="signOut()">Sign out</button>
+  </div>
 </header>
 <main>
   <div id="storeBar" class="hide"></div>
@@ -325,7 +350,7 @@ async function cldUpload(dataUrl){
 
 /* ----- Navigation ----- */
 function home(){ view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 'shop'); }
-function view(v){ cur = v; show(''); if(innerWidth <= 700) sideOpen = false; applySide();
+function view(v){ cur = v; show(''); document.querySelector('main').classList.toggle('wide', v==='aPos'); if(innerWidth <= 700) sideOpen = false; applySide();
   document.querySelectorAll('.v').forEach(x => x.classList.toggle('hide', x.id!==v));
   document.querySelectorAll('.bn button').forEach(b => b.classList.toggle('on', b.dataset.v===v));
   ({shop:loadShop, cart:drawCartView, track:openTrack, aOrders:loadAdminOrders, aProducts:loadAdminProducts, aStaff:loadStaff, aReports:loadReports, aPos:loadPos, aCash:loadCash, rDeliveries:loadRider})[v]?.();
@@ -489,7 +514,7 @@ const MENUS = {
 function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove('hide'); $('out').classList.remove('hide');
   $('who').textContent = (S.name || 'Staff') + ' · ' + S.role + ' · 🟢 online'; $('who').classList.remove('hide');
   $('bnA').innerHTML = (MENUS[S.role] || MENUS.cashier).map((m, i) => `<button data-v="${m[0]}" onclick="view('${m[0]}')"><b>${m[1]}</b><span ${i===0?'id="ordLbl"':''}>${m[2]}</span></button>`).join('');
-  $('bnA').classList.toggle('many', (MENUS[S.role] || []).length > 4); drawStoreBar(); refreshStore();
+  $('bnA').classList.toggle('many', (MENUS[S.role] || []).length > 4); flashBar(4000); refreshStore();
   view(S.role==='delivery' ? 'rDeliveries' : 'aOrders');
   try { Notification.requestPermission(); } catch(e){}
   poll(); pollT = setInterval(poll, 20000); }
@@ -659,21 +684,27 @@ function purgeOld(btn){ if(!confirm('Delete all orders older than 2 months from 
 
 /* ----- Store open / closed ----- */
 function applyInfo(i){ OPEN = !!i.open; DELIVERY_ON = !!i.delivery; QR = i.qr || ''; ST.open = OPEN;
-  $('closedBar').classList.toggle('hide', OPEN || !!S); if(S) drawStoreBar();
+  $('closedBar').classList.toggle('hide', OPEN || !!S); if(S) drawStoreBar(); else drawPill();
   const op = $('cMethod').querySelector('option[value=Delivery]'); op.disabled = !DELIVERY_ON; op.textContent = DELIVERY_ON ? 'Deliver to me' : 'Delivery – coming soon';
   $('delSoon').classList.toggle('hide', DELIVERY_ON);
   if(!DELIVERY_ON && $('cMethod').value === 'Delivery'){ $('cMethod').value = 'Pickup'; toggleAddr(); }
   const b = $('place'); b.disabled = !OPEN; b.textContent = OPEN ? 'Place order' : 'Store is closed'; }
 setInterval(() => { if(!S) api('getInfo').then(applyInfo).catch(() => {}); }, 30000);
-function drawStoreBar(){ const b = $('storeBar'); if(!S || S.role === 'delivery'){ b.classList.add('hide'); return; } b.classList.remove('hide');
+let barUntil = 0, barTimer;
+function drawPill(){ const p = $('stPill'); if(S && S.role === 'delivery'){ p.classList.add('hide'); return; } const open = S ? ST.open : OPEN;
+  p.className = 'pill ' + (open ? 'open' : 'closed') + (S ? ' tap' : ''); p.textContent = open ? '🟢 Open' : '🔴 Closed'; p.title = open ? 'The store is open' : 'The store is closed'; }
+function flashBar(ms){ barUntil = Date.now() + ms; drawStoreBar(); clearTimeout(barTimer); barTimer = setTimeout(drawStoreBar, ms + 100); }
+function pillClick(){ if(S && S.role !== 'delivery') flashBar(8000); }
+function drawStoreBar(){ drawPill(); const b = $('storeBar'); if(!S || S.role === 'delivery'){ b.classList.add('hide'); return; } $('closedBar').classList.add('hide');
   b.innerHTML = ST.open ? '<span>🟢 <b>Store is OPEN</b></span><button class="alt del" onclick="closeStore(this)">Close store</button>'
-    : '<span>🔴 <b>Store is CLOSED</b> · customers cannot order</span><button class="go" onclick="openStoreDlg(this)">Open store</button>'; }
-async function refreshStore(){ try { const i = await api('getInfo'); if(!!i.open !== ST.open){ ST.open = !!i.open; drawStoreBar(); } } catch(e){} }
+    : '<span>🔴 <b>Store is CLOSED</b> · customers cannot order</span><button class="go" onclick="openStoreDlg(this)">Open store</button>';
+  b.classList.toggle('hide', ST.open && Date.now() > barUntil); }
+async function refreshStore(){ try { const i = await api('getInfo'); if(!!i.open !== ST.open){ ST.open = !!i.open; flashBar(4000); } } catch(e){} }
 function openStoreDlg(btn){ run(async () => { const st = await api('adminStoreState', S.token); if(st.open){ ST.open = true; drawStoreBar(); return; }
   $('odAmt').value = st.lastEnd != null ? st.lastEnd : 0; $('odNote').textContent = st.lastEnd != null ? 'Suggested: the money you closed with last time. Change it if the count is different.' : 'Count the cash in the drawer and enter it.';
   $('od').showModal(); $('odAmt').focus(); }, btn); }
 async function openStore(){ $('odBtn').disabled = true;
-  try { await api('adminStoreOpen', S.token, parseFloat($('odAmt').value)); $('od').close(); ST.open = true; drawStoreBar(); show('Store is open. Customers can order now.', 'ok'); if(cur==='aCash' || cur==='aPos') view(cur); }
+  try { await api('adminStoreOpen', S.token, parseFloat($('odAmt').value)); $('od').close(); ST.open = true; flashBar(4000); show('Store is open. Customers can order now.', 'ok'); if(cur==='aCash' || cur==='aPos') view(cur); }
   catch(e){ $('odNote').textContent = e.message || String(e); }
   $('odBtn').disabled = false; }
 function closeStore(btn){ if(!confirm('Close the store? Customers will not be able to place orders.')) return;
@@ -700,39 +731,59 @@ async function openScan(cb, once){ scCb = cb; scOnce = !!once; scLast = ''; $('s
   } catch(e){ $('scMsg').textContent = 'Camera not available. Allow camera access (the site must be opened with https) or type the barcode instead.'; } }
 function closeScan(){ if(scStop){ scStop(); scStop = null; } if($('sc').open) $('sc').close(); }
 
-/* ----- POS (walk-in sales; deducts stock) ----- */
-const posMatches = v => { const t = norm(v).split(/\s+/).filter(Boolean); return adm.filter(p => { const x = norm([p.name, p.category, p.barcode, ...p.tags].join(' ')); return t.every(w => x.includes(w)); }).slice(0, 6); };
+/* ----- POS: categories | product tiles | current transaction ----- */
+let posCat = 'All', posQ = '';
+const posFilter = () => { const t = norm(posQ).split(/\s+/).filter(Boolean); return adm.filter(p => (posCat === 'All' || p.category === posCat) && t.every(w => norm([p.name, p.category, p.barcode, ...p.tags].join(' ')).includes(w))); };
 function loadPos(){
-  $('aPos').innerHTML = `<h2>POS</h2><p class="muted" id="posNote"></p>
-  <div class="row" style="flex-wrap:nowrap;margin-top:8px"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
-    <button onclick="openScan(posScanned, false)">📷 Scan</button></div>
-  <div id="posRes" class="pos-res"></div>
-  <div class="card" style="margin-top:10px"><div id="posLines"></div><div class="row" style="margin-top:8px"><b id="posTot"></b><button class="alt del" onclick="posReset()">Clear</button></div>
-    <div class="two"><div><label for="posCash">Cash received (optional)</label><input id="posCash" type="number" min="0" oninput="posTotals()"></div><div><label>Change</label><b id="posChg" style="display:block;padding-top:10px"></b></div></div>
-    <p><button class="go full" id="posGo" onclick="posPay(this)">Complete sale and deduct stock</button></p></div>`;
-  return run(async () => { adm = await api('adminGetProducts', S.token); posDraw(); const i = $('posIn'); if(i) i.focus(); }); }
-function posSearch(){ const v = $('posIn').value; $('posX').classList.toggle('hide', !v); const f = v.trim() ? posMatches(v) : [];
-  $('posRes').innerHTML = f.map(p => `<button class="alt" onclick="posAdd('${p.id}');posClear()">${esc(p.name)} · ${peso(p.price)} · ${p.stock} left</button>`).join(''); }
-function posClear(){ $('posIn').value = ''; $('posX').classList.add('hide'); $('posRes').innerHTML = ''; $('posIn').focus(); }
+  $('aPos').innerHTML = `<div class="pos">
+    <aside class="pos-cats" id="posCats" aria-label="Categories"></aside>
+    <section class="pos-main">
+      <div class="row" style="flex-wrap:nowrap"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
+        <button onclick="openScan(posScanned, false)">📷 Scan</button></div>
+      <p class="msg err hide" id="posNote" style="margin:8px 0 0"></p>
+      <button class="alt full pos-jump" id="posJump" style="margin-top:8px" onclick="$('posPanel').scrollIntoView({behavior:'smooth'})"></button>
+      <div class="pos-grid" id="posGrid"></div>
+    </section>
+    <section class="pos-panel card" id="posPanel">
+      <div class="row"><h3>Current transaction</h3><button class="alt del" onclick="posReset()">Clear</button></div>
+      <div id="posLines"></div>
+      <label for="posDisc">Discount (₱)</label><input id="posDisc" type="number" min="0" oninput="posTotals()">
+      <div class="pos-total" id="posTot"></div>
+      <div class="two"><div><label for="posCash">Cash received</label><input id="posCash" type="number" min="0" oninput="posTotals()"></div><div><label>Change</label><b id="posChg" style="display:block;padding-top:10px"></b></div></div>
+      <button class="go full pos-pay" id="posGo" onclick="posPay(this)">PAYMENT</button>
+    </section></div>`;
+  return run(async () => { adm = await api('adminGetProducts', S.token); posCat = 'All'; posQ = ''; posDraw(); }); }
+function posSearch(){ posQ = $('posIn').value; $('posX').classList.toggle('hide', !posQ); drawPosGrid(); }
+function posClear(){ $('posIn').value = ''; posQ = ''; $('posX').classList.add('hide'); drawPosGrid(); $('posIn').focus(); }
+function posSetCat(c){ posCat = c; drawPosCats(); drawPosGrid(); }
 function posKey(e){ if(e.key !== 'Enter') return; e.preventDefault(); const v = $('posIn').value.trim(); if(!v) return;
-  const hit = adm.find(p => p.barcode && p.barcode === v) || (posMatches(v).length === 1 ? posMatches(v)[0] : null);
+  const hit = adm.find(p => p.barcode && p.barcode === v) || (posFilter().length === 1 ? posFilter()[0] : null);
   if(hit){ const m = posAdd(hit.id); posClear(); if(m && m.indexOf('Only') === 0) show(m); } else show('No product found for "' + v + '". Add its barcode in Inventory.'); }
 function posScanned(code){ const p = adm.find(x => x.barcode && x.barcode === code); return p ? posAdd(p.id) : 'No product with barcode ' + code + '. Add it in Inventory.'; }
 function posAdd(id){ const p = adm.find(x => x.id === id); if(!p) return ''; const n = (posCart[id] || 0) + 1;
   if(n > p.stock) return 'Only ' + p.stock + ' of ' + p.name + ' in stock'; posCart[id] = n; posDraw(); return 'Added ' + p.name + ' (' + n + ')'; }
 function posQty(id, d){ const p = adm.find(x => x.id === id), n = (posCart[id] || 0) + d; if(n <= 0) delete posCart[id]; else if(n <= p.stock) posCart[id] = n; posDraw(); }
-function posReset(){ posCart = {}; if($('posCash')) $('posCash').value = ''; posDraw(); }
-const posTotal = () => Object.keys(posCart).reduce((t, id) => { const p = adm.find(x => x.id === id); return t + (p ? p.price * posCart[id] : 0); }, 0);
-function posTotals(){ const t = posTotal(), c = parseFloat($('posCash').value) || 0; $('posTot').textContent = 'Total: ' + peso(t); $('posChg').textContent = c ? (c >= t ? peso(c - t) : 'Short ' + peso(t - c)) : ''; }
-function posDraw(){ if(!$('posLines')) return; const ids = Object.keys(posCart);
+function posReset(){ posCart = {}; ['posCash', 'posDisc'].forEach(i => { if($(i)) $(i).value = ''; }); posDraw(); }
+function drawPosCats(){ const c = {}; adm.forEach(p => c[p.category] = (c[p.category] || 0) + 1);
+  $('posCats').innerHTML = ['All', ...Object.keys(c).sort((a, b) => a.localeCompare(b))].map(n => `<button class="pcat ${n===posCat?'on':''}" data-c="${esc(n)}" onclick="posSetCat(this.dataset.c)"><span>${esc(n)}</span><small>${n==='All' ? adm.length : c[n]}</small></button>`).join(''); }
+function drawPosGrid(){ const f = posFilter().slice(0, 150);
+  $('posGrid').innerHTML = f.map(p => `<button class="ptile" ${p.stock < 1 ? 'disabled' : ''} onclick="posAdd('${p.id}')">${posCart[p.id] ? `<span class="qb">${posCart[p.id]}</span>` : ''}
+    <div class="pimg">${imgTag(p.image, 120)}</div><b>${esc(p.name)}</b><span class="price">${peso(p.price)}</span>${p.stock < 1 ? '<small>Out of stock</small>' : p.stock <= 5 ? `<small>${p.stock} left</small>` : ''}</button>`).join('')
+    || '<p class="muted">No products found.</p>'; }
+const posSub = () => Object.keys(posCart).reduce((t, id) => { const p = adm.find(x => x.id === id); return t + (p ? p.price * posCart[id] : 0); }, 0);
+function posTotals(){ const sub = posSub(), disc = Math.min(Math.max(parseFloat($('posDisc').value) || 0, 0), sub), total = sub - disc, c = parseFloat($('posCash').value) || 0;
+  const n = Object.keys(posCart).reduce((t, id) => t + posCart[id], 0);
+  $('posTot').textContent = 'TOTAL: ' + peso(total); $('posChg').textContent = c ? (c >= total ? peso(c - total) : 'Short ' + peso(total - c)) : '';
+  $('posJump').textContent = `🧾 Current transaction · ${n} item${n === 1 ? '' : 's'} · ${peso(total)} ↓`; }
+function posDraw(){ if(!$('posLines')) return; drawPosCats(); drawPosGrid(); const ids = Object.keys(posCart);
   $('posLines').innerHTML = ids.length ? ids.map(id => { const p = adm.find(x => x.id === id); if(!p) return '';
-    return `<div class="line"><div><b>${esc(p.name)}</b><div class="muted">${peso(p.price)} each${p.barcode ? ' · ' + esc(p.barcode) : ''}</div></div>
+    return `<div class="line"><div><b>${esc(p.name)}</b><div class="muted">${peso(p.price)} each</div></div>
       <div class="qty"><button class="alt" onclick="posQty('${id}',-1)">−</button><b>${posCart[id]}</b><button onclick="posQty('${id}',1)">+</button></div><div>${peso(p.price*posCart[id])}</div></div>`; }).join('')
-    : '<p class="muted">Scan a barcode or search for a product to start a sale.</p>';
-  $('posNote').textContent = ST.open ? 'Walk-in sales use the store price (no online +₱1).' : 'The store is closed. Open the store (top bar) to make sales.';
+    : '<p class="muted">Tap a product or scan a barcode to start.</p>';
+  const note = $('posNote'); note.textContent = ST.open ? '' : 'The store is closed. Open the store to make sales.'; note.classList.toggle('hide', ST.open);
   $('posGo').disabled = !ids.length || !ST.open; posTotals(); }
-function posPay(btn){ const items = Object.keys(posCart).map(id => ({id, qty:posCart[id]})), c = parseFloat($('posCash').value) || 0;
-  run(async () => { const r = await api('posSale', S.token, items, c); posCart = {}; $('posCash').value = ''; adm = await api('adminGetProducts', S.token); posDraw();
+function posPay(btn){ const items = Object.keys(posCart).map(id => ({id, qty:posCart[id]})), c = parseFloat($('posCash').value) || 0, d = parseFloat($('posDisc').value) || 0;
+  run(async () => { const r = await api('posSale', S.token, items, c, d); posCart = {}; $('posCash').value = ''; $('posDisc').value = ''; adm = await api('adminGetProducts', S.token); posDraw();
     show('Sale ' + r.id + ' recorded: ' + peso(r.total) + (r.change ? ' · change ' + peso(r.change) : '') + '. Stock updated.', 'ok'); }, btn); }
 
 /* ----- Cash in / cash out ----- */
@@ -783,6 +834,7 @@ function respond(id, action, btn){ run(async () => { await api('riderRespond', S
 api('getInfo').then(i => { ADDR = i.address; STORE = i.name; CLD = {cloud:i.cloud || '', preset:i.preset || ''}; applyInfo(i);
   if(i.emailCodes) $('codeLink').classList.remove('hide');
   document.querySelectorAll('.stName').forEach(e => e.textContent = STORE); document.querySelectorAll('.stAddr').forEach(e => e.textContent = ADDR); toggleAddr(); }).catch(() => {});
+try { new ResizeObserver(() => document.documentElement.style.setProperty('--hh', $('top').offsetHeight + 'px')).observe($('top')); } catch(e){}
 cart = load('sariC') || {};
 const saved = load('sariA');
 if(saved && saved.token){ S = saved; startAdmin(); }
