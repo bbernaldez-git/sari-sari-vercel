@@ -31,7 +31,8 @@ create table if not exists cash_entries (id serial primary key, session_id int n
   kind text not null, method text not null default 'Cash', amount numeric not null check (amount > 0), ref text not null default '',
   status text not null default 'Done', by_email text not null default '', released_at timestamptz);
 create table if not exists pos_sales (id text primary key, session_id int, created timestamptz not null default now(), by_email text not null,
-  items jsonb not null, total numeric not null, cash numeric);`;
+  items jsonb not null, total numeric not null, cash numeric);
+alter table pos_sales add column if not exists discount numeric not null default 0;`;
 
 let pool, ready;
 const getPool = () => pool || (pool = new (require('pg').Pool)({
@@ -463,7 +464,7 @@ async function adminCashCancel(token, id) {
   return true;
 }
 /* Walk-in sale at the counter: deducts stock at the store (base) price */
-async function posSale(token, items, cash) {
+async function posSale(token, items, cash, discount) {
   const a = await auth(token, STORE_ROLES);
   const s = await currentSession(); if (!s) throw new E('The store is closed. Open the store first.');
   if (!Array.isArray(items) || !items.length || items.length > 60) throw new E('The sale is empty.');
@@ -479,9 +480,10 @@ async function posSale(token, items, cash) {
       lines.push({ id: p.id, name: p.name, price: Number(p.price), qty }); total += Number(p.price) * qty;
       await client.query('update products set stock = stock - $1 where id = $2', [qty, p.id]);
     }
+    const d = Math.max(0, Math.min(Number(discount) || 0, total)); total -= d;
     const c = Number(cash) || 0;
     if (c && c < total) throw new E('Cash received is less than the total.');
-    await client.query('insert into pos_sales(id,session_id,by_email,items,total,cash) values ($1,$2,$3,$4,$5,$6)', [id, s.id, a.email, JSON.stringify(lines), total, c || null]);
+    await client.query('insert into pos_sales(id,session_id,by_email,items,total,cash,discount) values ($1,$2,$3,$4,$5,$6,$7)', [id, s.id, a.email, JSON.stringify(lines), total, c || null, d]);
     await client.query('commit');
     return { id, total, change: c ? c - total : 0 };
   } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
