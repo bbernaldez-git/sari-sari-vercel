@@ -20,3 +20,4 @@ create table if not exists cash_entries (id serial primary key, session_id int n
   status text not null default 'Done', by_email text not null default '', released_at timestamptz);
 create table if not exists pos_sales (id text primary key, session_id int, created timestamptz not null default now(), by_email text not null,
   items jsonb not null, total numeric not null, cash numeric);
+alter table pos_sales add column if not exists discount numeric not null default 0;
