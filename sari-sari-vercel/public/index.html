@@ -8,7 +8,7 @@
 <style>
 :root{--blue:#1d4e9e;--mango:#f6b21b;--chili:#c8372d;--leaf:#2e7d4f;--bg:#eaf0f8;--ink:#14213d;--card:#fff;--line:#c9d6ea}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
 h1,h2,h3{font-family:'Baloo 2',system-ui,sans-serif;margin:0;line-height:1.1}
 header{position:sticky;top:0;z-index:25;background:var(--blue);color:#fff;border-bottom:6px solid var(--mango);padding:8px 16px;display:flex;gap:6px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .hd-brand{flex:1 1 230px;min-width:0}
@@ -17,11 +17,11 @@ header{position:sticky;top:0;z-index:25;background:var(--blue);color:#fff;border
 .pill{border:0;border-radius:99px;padding:5px 12px;font-weight:700;font-size:.85rem;background:#fff;color:var(--ink);cursor:default}
 .pill.open{background:#dff3e6;color:#1d5a37}.pill.closed{background:#fde5e2;color:#8a1f17}.pill.tap{cursor:pointer}
 @media(max-width:560px){.hd-brand .addr{display:none}.hd-right{width:100%;justify-content:space-between}}
-header h1{font-size:1.4rem;color:var(--mango);cursor:pointer}
+header h1{font-size:1.25rem;color:var(--mango);cursor:pointer}
 .addr{font-size:.78rem;opacity:.9}
 main{max-width:1060px;margin:0 auto;padding:16px 16px 100px}
 button,input,select,textarea{font:inherit}
-button{cursor:pointer;border:0;border-radius:8px;padding:9px 14px;background:var(--blue);color:#fff;font-weight:600}
+button{cursor:pointer;border:0;border-radius:8px;padding:8px 12px;background:var(--blue);color:#fff;font-weight:600}
 button.alt{background:#fff;color:var(--blue);border:2px solid var(--blue)}
 button.go{background:var(--chili)}
 button.hd{background:transparent;color:#fff;border:2px solid #ffffff80;padding:6px 12px}
@@ -63,6 +63,22 @@ main.wide{max-width:1400px}
 @media(min-width:1000px){.pos{grid-template-columns:170px 1fr 340px;align-items:start}.pos-jump{display:none}
   .pos-cats{flex-direction:column;overflow-y:auto;position:sticky;top:calc(var(--hh,0px) + 10px);max-height:calc(100vh - var(--hh,0px) - 110px)}
   .pcat{white-space:normal;text-align:left;display:flex;justify-content:space-between;gap:6px}.pos-panel{position:sticky;top:calc(var(--hh,0px) + 10px)}}
+/* POS: floating search, flat seamless look, smaller text, items-only scrolling */
+.pos-search{position:sticky;top:var(--hh,0px);z-index:6;background:var(--bg);padding:8px 0 6px;margin-top:-8px}
+.pos .sw input,.pos-panel input{border:0;background:#fff;padding:7px 10px;font-size:.9rem}
+.pos-panel input{background:#f2f6fc}
+.pos .ptile{border:0;box-shadow:0 1px 2px #1d4e9e1f;padding:6px;gap:1px}
+.pos .ptile b{font-size:.76rem}.pos .ptile .price{font-size:.88rem}.pos .ptile small{font-size:.66rem}.pos .ptile .pimg{height:70px}
+.pos .pos-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.pos .pcat{border:0;background:transparent;font-size:.82rem;padding:6px 10px}
+.pos .pcat.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px #1d4e9e1f}
+.pos-panel{border:0;padding:12px;gap:4px}
+.pos-panel h3{font-size:.95rem}.pos-panel label{font-size:.78rem;margin:6px 0 2px}
+.pos-panel .line{border-bottom:0;padding:5px 0;gap:6px;font-size:.85rem}.pos-panel .line b{font-size:.85rem}.pos-panel .line .muted{font-size:.72rem}
+.pos-panel .line .qty button{padding:2px 10px}
+#posLines{flex:1 1 auto;min-height:0;overflow-y:auto;max-height:36vh;scrollbar-width:thin}
+.pos-total{font-size:1.1rem;padding:10px}.pos-pay{padding:12px;font-size:1rem}
+@media(min-width:1000px){.pos-panel{height:calc(100vh - var(--hh,0px) - 124px)}#posLines{max-height:none}}
 .hide{display:none!important}
 /* fixed bottom navigation */
 .bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
@@ -738,7 +754,7 @@ function loadPos(){
   $('aPos').innerHTML = `<div class="pos">
     <aside class="pos-cats" id="posCats" aria-label="Categories"></aside>
     <section class="pos-main">
-      <div class="row" style="flex-wrap:nowrap"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
+      <div class="row pos-search" style="flex-wrap:nowrap"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
         <button onclick="openScan(posScanned, false)">📷 Scan</button></div>
       <p class="msg err hide" id="posNote" style="margin:8px 0 0"></p>
       <button class="alt full pos-jump" id="posJump" style="margin-top:8px" onclick="$('posPanel').scrollIntoView({behavior:'smooth'})"></button>
