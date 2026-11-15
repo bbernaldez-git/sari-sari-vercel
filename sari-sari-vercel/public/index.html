@@ -48,38 +48,49 @@ label{display:block;font-weight:600;margin:10px 0 4px}
 #scVideo{width:100%;max-height:60vh;background:#000;border-radius:8px}
 .pos-res button{display:block;width:100%;text-align:left;margin:4px 0}
 main.wide{max-width:1400px}
-.pos{display:grid;gap:12px;grid-template-columns:1fr}
-.pos-cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
-.pcat{white-space:nowrap;background:#fff;color:var(--ink);border:2px solid var(--line);padding:6px 12px;font-weight:600}
-.pcat.on{background:#e3ebf8;border-color:var(--blue);color:var(--blue)}.pcat small{opacity:.65;margin-left:6px}
-.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-top:10px}
-.ptile{position:relative;background:#fff;color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
-.ptile .pimg{width:100%;margin-bottom:4px}.ptile b{font-size:.85rem;line-height:1.15;max-height:2.3em;overflow:hidden}.ptile .price{font-size:1rem}
-.ptile:disabled{opacity:.45}.ptile small{font-size:.7rem;color:var(--chili)}
+#posStrip{display:contents}
+.mstrip{position:sticky;top:var(--hh,0px);z-index:7;height:46px;display:flex;gap:10px;background:var(--bg);padding:4px 0;box-sizing:border-box}
+.mstrip>div{flex:1;background:#fff;border-radius:10px;padding:0 12px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 1px 2px #1d4e9e1f}
+.mstrip small{font-size:.6rem;color:#55657f;line-height:1;text-transform:uppercase;letter-spacing:.04em}.mstrip b{font-size:1rem;line-height:1.15}.mstrip .bal b{color:var(--blue)}
+.segs{display:flex;gap:4px;background:#dbe5f3;border-radius:10px;padding:3px;margin:8px 0}
+.segs button{flex:1;background:transparent;color:var(--ink);padding:7px 4px;font-size:.85rem}.segs button.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px #1d4e9e1f}
+.feeline{min-height:1.3em;font-weight:700;color:var(--blue);margin:6px 0;font-size:.85rem}
+.three{display:grid;grid-template-columns:.85fr 1.15fr 1.15fr;gap:6px}.three input,.three select{padding:6px 4px;font-size:.78rem;min-width:0}
+/* POS: phone layout first (search + categories stay pinned, transaction floats above the menu) */
+.pos{display:flex;flex-direction:column}
+.pos-main{display:contents}
+.pos-search{order:1;position:sticky;top:calc(var(--hh,0px) + 46px);z-index:6;background:var(--bg);height:50px;box-sizing:border-box;padding:6px 0}
+.pos-cats{order:2;position:sticky;top:calc(var(--hh,0px) + 96px);z-index:6;background:var(--bg);height:44px;box-sizing:border-box;display:flex;gap:6px;overflow-x:auto;align-items:center;padding:4px 0}
+#posNote{order:3}
+.pos-grid{order:4;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin:8px 0 84px}
+.pcat{white-space:nowrap;background:transparent;color:var(--ink);border:0;padding:6px 10px;font-weight:600;font-size:.82rem;flex:none}
+.pcat.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px #1d4e9e1f}.pcat small{opacity:.65;margin-left:6px}
+.ptile{position:relative;background:#fff;color:var(--ink);border:0;box-shadow:0 1px 2px #1d4e9e1f;border-radius:12px;padding:6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px}
+.ptile .pimg{width:100%;height:70px;margin-bottom:4px}.ptile b{font-size:.76rem;line-height:1.15;max-height:2.3em;overflow:hidden}.ptile .price{font-size:.88rem}
+.ptile small{font-size:.66rem;color:var(--chili)}.ptile:disabled{opacity:.45}
 .ptile .qb{position:absolute;top:6px;right:6px;background:var(--blue);color:#fff;border-radius:99px;min-width:24px;padding:0 6px;font-weight:700;font-size:.85rem}
-.pos-panel{display:flex;flex-direction:column;gap:6px}
-.pos-total{background:var(--leaf);color:#fff;text-align:center;border-radius:10px;padding:14px;font-weight:800;font-size:1.3rem;font-family:'Baloo 2',sans-serif}
-.pos-pay{padding:14px;font-size:1.1rem}
-@media(min-width:1000px){.pos{grid-template-columns:170px 1fr 340px;align-items:start}.pos-jump{display:none}
-  .pos-cats{flex-direction:column;overflow-y:auto;position:sticky;top:calc(var(--hh,0px) + 10px);max-height:calc(100vh - var(--hh,0px) - 110px)}
-  .pcat{white-space:normal;text-align:left;display:flex;justify-content:space-between;gap:6px}.pos-panel{position:sticky;top:calc(var(--hh,0px) + 10px)}}
-/* POS: floating search, flat seamless look, smaller text, items-only scrolling */
-.pos-search{position:sticky;top:var(--hh,0px);z-index:6;background:var(--bg);padding:8px 0 6px;margin-top:-8px}
-.pos .sw input,.pos-panel input{border:0;background:#fff;padding:7px 10px;font-size:.9rem}
-.pos-panel input{background:#f2f6fc}
-.pos .ptile{border:0;box-shadow:0 1px 2px #1d4e9e1f;padding:6px;gap:1px}
-.pos .ptile b{font-size:.76rem}.pos .ptile .price{font-size:.88rem}.pos .ptile small{font-size:.66rem}.pos .ptile .pimg{height:70px}
-.pos .pos-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
-.pos .pcat{border:0;background:transparent;font-size:.82rem;padding:6px 10px}
-.pos .pcat.on{background:#fff;color:var(--blue);box-shadow:0 1px 2px #1d4e9e1f}
-.pos-panel{border:0;padding:12px;gap:4px}
-.pos-panel h3{font-size:.95rem}.pos-panel label{font-size:.78rem;margin:6px 0 2px}
-.pos-panel .line{border-bottom:0;padding:5px 0;gap:6px;font-size:.85rem}.pos-panel .line b{font-size:.85rem}.pos-panel .line .muted{font-size:.72rem}
-.pos-panel .line .qty button{padding:2px 10px}
-#posLines{flex:1 1 auto;min-height:0;overflow-y:auto;max-height:36vh;scrollbar-width:thin}
-.pos-total{font-size:1.1rem;padding:10px}.pos-pay{padding:12px;font-size:1rem}
-@media(min-width:1000px){.pos-panel{height:calc(100vh - var(--hh,0px) - 124px)}#posLines{max-height:none}}
-.hide{display:none!important}
+.pos .sw input,.pos-panel input{border:0;background:#fff;padding:7px 10px;font-size:.9rem}.pos-panel input{background:#f2f6fc}
+.pos-panel{position:fixed;left:8px;right:8px;bottom:calc(var(--bnh,60px) + 6px);z-index:20;background:#fff;border:0;border-radius:14px;box-shadow:0 -2px 14px #0003;max-height:70vh;display:flex;flex-direction:column;padding:8px 12px}
+.pos-head{display:flex;align-items:center;gap:8px;cursor:pointer;justify-content:space-between}.pos-head b{font-size:.9rem}
+.pos-sum{font-size:.8rem;color:var(--blue);font-weight:700;flex:1;text-align:right}.pos-act{display:flex;align-items:center;gap:8px}
+.pos-act button{padding:3px 10px;font-size:.8rem}.pos-caret{font-size:.8rem;transition:transform .15s}.pos-panel.open .pos-caret{transform:rotate(180deg)}
+.pos-body{display:flex;flex-direction:column;gap:4px;min-height:0;flex:1;margin-top:6px}.pos-panel:not(.open) .pos-body{display:none}
+#posLines{flex:1 1 auto;min-height:0;overflow-y:auto;max-height:30vh;scrollbar-width:thin}
+.pos-panel label{font-size:.78rem;margin:6px 0 2px}
+.pos-panel .line{grid-template-columns:1fr auto 62px}.pos-panel .line>:last-child{grid-column:auto;text-align:right}.pos-panel .two{grid-template-columns:1fr 1fr}
+.pos-panel .line{border-bottom:0;padding:5px 0;gap:6px;font-size:.85rem}.pos-panel .line b{font-size:.85rem}.pos-panel .line .muted{font-size:.72rem}.pos-panel .line .qty button{padding:2px 10px}
+.pos-total{background:var(--leaf);color:#fff;text-align:center;border-radius:10px;padding:10px;font-weight:800;font-size:1.1rem;font-family:'Baloo 2',sans-serif}.pos-pay{padding:12px;font-size:1rem}
+@media(min-width:1000px){
+  .pos{display:grid;grid-template-columns:170px 1fr 340px;gap:14px;align-items:start}
+  .pos-main{display:block}
+  .pos-search{height:auto;padding:8px 0 6px}
+  .pos-cats{flex-direction:column;align-items:stretch;overflow-y:auto;height:auto;background:transparent;padding:0;top:calc(var(--hh,0px) + 56px);max-height:calc(100vh - var(--hh,0px) - 46px - 130px)}
+  .pcat{white-space:normal;text-align:left;display:flex;justify-content:space-between;gap:6px}
+  .pos-grid{margin:8px 0 0;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  .pos-panel{position:sticky;top:calc(var(--hh,0px) + 56px);left:auto;right:auto;bottom:auto;height:calc(100vh - var(--hh,0px) - 46px - 134px);max-height:none;border-radius:12px;box-shadow:0 1px 2px #1d4e9e1f;z-index:1;padding:12px}
+  .pos-caret,.pos-sum{display:none}.pos-head{cursor:default}
+  .pos-panel .pos-body,.pos-panel:not(.open) .pos-body{display:flex}#posLines{max-height:none}}
+.hide{display:none!important}.hide{display:none!important}
 /* fixed bottom navigation */
 .bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
 .bn button{flex:1;background:none;color:var(--ink);border-radius:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.82rem}
@@ -299,7 +310,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
 </dialog>
 <dialog id="od" aria-labelledby="odTitle">
   <h2 id="odTitle">Open the store</h2>
-  <label for="odAmt">Starting money (₱)</label><input id="odAmt" type="number" min="0" step="1">
+  <label for="odPos">POS starting money (₱)</label><input id="odPos" type="number" min="0" step="1">
+  <label for="odAmt">Cash in/out starting money (₱)</label><input id="odAmt" type="number" min="0" step="1">
   <p class="muted" id="odNote"></p>
   <p class="row"><button class="alt" onclick="$('od').close()">Cancel</button><button class="go" id="odBtn" onclick="openStore()">Open store</button></p>
 </dialog>
@@ -717,14 +729,15 @@ function drawStoreBar(){ drawPill(); const b = $('storeBar'); if(!S || S.role ==
   b.classList.toggle('hide', ST.open && Date.now() > barUntil); }
 async function refreshStore(){ try { const i = await api('getInfo'); if(!!i.open !== ST.open){ ST.open = !!i.open; flashBar(4000); } } catch(e){} }
 function openStoreDlg(btn){ run(async () => { const st = await api('adminStoreState', S.token); if(st.open){ ST.open = true; drawStoreBar(); return; }
-  $('odAmt').value = st.lastEnd != null ? st.lastEnd : 0; $('odNote').textContent = st.lastEnd != null ? 'Suggested: the money you closed with last time. Change it if the count is different.' : 'Count the cash in the drawer and enter it.';
-  $('od').showModal(); $('odAmt').focus(); }, btn); }
+  $('odPos').value = st.lastPosEnd != null ? st.lastPosEnd : 0; $('odAmt').value = st.lastEnd != null ? st.lastEnd : 0;
+  $('odNote').textContent = st.lastEnd != null ? 'Suggested from the last closing. Change them if your count is different.' : 'Count the money in each drawer.';
+  $('od').showModal(); $('odPos').focus(); }, btn); }
 async function openStore(){ $('odBtn').disabled = true;
-  try { await api('adminStoreOpen', S.token, parseFloat($('odAmt').value)); $('od').close(); ST.open = true; flashBar(4000); show('Store is open. Customers can order now.', 'ok'); if(cur==='aCash' || cur==='aPos') view(cur); }
+  try { await api('adminStoreOpen', S.token, parseFloat($('odAmt').value), parseFloat($('odPos').value)); $('od').close(); ST.open = true; flashBar(4000); show('Store is open. Customers can order now.', 'ok'); if(cur==='aCash' || cur==='aPos') view(cur); }
   catch(e){ $('odNote').textContent = e.message || String(e); }
   $('odBtn').disabled = false; }
 function closeStore(btn){ if(!confirm('Close the store? Customers will not be able to place orders.')) return;
-  run(async () => { const r = await api('adminStoreClose', S.token); ST.open = false; drawStoreBar(); if(cur==='aCash' || cur==='aPos') view(cur); show('Store closed. Closing money: ' + peso(r.endAmount) + '.', 'ok'); }, btn); }
+  run(async () => { const r = await api('adminStoreClose', S.token); ST.open = false; drawStoreBar(); if(cur==='aCash' || cur==='aPos') view(cur); show('Store closed. Cash in/out: ' + peso(r.endAmount) + ' · POS: ' + peso(r.posEnd) + '.', 'ok'); }, btn); }
 
 /* ----- Barcode scanner (phone camera; also works with a USB/Bluetooth scanner typing into the box) ----- */
 function loadZx(){ return window.ZXing ? Promise.resolve() : new Promise((ok, no) => { const t = document.createElement('script');
@@ -747,28 +760,33 @@ async function openScan(cb, once){ scCb = cb; scOnce = !!once; scLast = ''; $('s
   } catch(e){ $('scMsg').textContent = 'Camera not available. Allow camera access (the site must be opened with https) or type the barcode instead.'; } }
 function closeScan(){ if(scStop){ scStop(); scStop = null; } if($('sc').open) $('sc').close(); }
 
+/* ----- Money strip (fixed at the top of POS and Cash) ----- */
+const stripHtml = (start, bal) => `<div class="mstrip"><div><small>Start</small><b>${start == null ? '—' : peso(start)}</b></div><div class="bal"><small>Balance</small><b>${bal == null ? '—' : peso(bal)}</b></div></div>`;
+
 /* ----- POS: categories | product tiles | current transaction ----- */
-let posCat = 'All', posQ = '';
+let posCat = 'All', posQ = '', PST = null;
 const posFilter = () => { const t = norm(posQ).split(/\s+/).filter(Boolean); return adm.filter(p => (posCat === 'All' || p.category === posCat) && t.every(w => norm([p.name, p.category, p.barcode, ...p.tags].join(' ')).includes(w))); };
 function loadPos(){
-  $('aPos').innerHTML = `<div class="pos">
+  $('aPos').innerHTML = `<div id="posStrip"></div><div class="pos">
     <aside class="pos-cats" id="posCats" aria-label="Categories"></aside>
     <section class="pos-main">
       <div class="row pos-search" style="flex-wrap:nowrap"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
         <button onclick="openScan(posScanned, false)">📷 Scan</button></div>
       <p class="msg err hide" id="posNote" style="margin:8px 0 0"></p>
-      <button class="alt full pos-jump" id="posJump" style="margin-top:8px" onclick="$('posPanel').scrollIntoView({behavior:'smooth'})"></button>
       <div class="pos-grid" id="posGrid"></div>
     </section>
     <section class="pos-panel card" id="posPanel">
-      <div class="row"><h3>Current transaction</h3><button class="alt del" onclick="posReset()">Clear</button></div>
-      <div id="posLines"></div>
-      <label for="posDisc">Discount (₱)</label><input id="posDisc" type="number" min="0" oninput="posTotals()">
-      <div class="pos-total" id="posTot"></div>
-      <div class="two"><div><label for="posCash">Cash received</label><input id="posCash" type="number" min="0" oninput="posTotals()"></div><div><label>Change</label><b id="posChg" style="display:block;padding-top:10px"></b></div></div>
-      <button class="go full pos-pay" id="posGo" onclick="posPay(this)">PAYMENT</button>
+      <div class="pos-head" onclick="posToggle()"><b>Current transaction</b><span class="pos-sum" id="posSum"></span><span class="pos-act"><button class="alt del" onclick="event.stopPropagation();posReset()">Clear</button><span class="pos-caret">▲</span></span></div>
+      <div class="pos-body">
+        <div id="posLines"></div>
+        <label for="posDisc">Discount (₱)</label><input id="posDisc" type="number" min="0" oninput="posTotals()">
+        <div class="pos-total" id="posTot"></div>
+        <div class="two"><div><label for="posCash">Cash received</label><input id="posCash" type="number" min="0" oninput="posTotals()"></div><div><label>Change</label><b id="posChg" style="display:block;padding-top:10px"></b></div></div>
+        <button class="go full pos-pay" id="posGo" onclick="posPay(this)">PAYMENT</button>
+      </div>
     </section></div>`;
-  return run(async () => { adm = await api('adminGetProducts', S.token); posCat = 'All'; posQ = ''; posDraw(); }); }
+  return run(async () => { [adm, PST] = await Promise.all([api('adminGetProducts', S.token), api('adminStoreState', S.token)]); ST.open = PST.open; posCat = 'All'; posQ = ''; posDraw(); }); }
+function posToggle(){ $('posPanel').classList.toggle('open'); }
 function posSearch(){ posQ = $('posIn').value; $('posX').classList.toggle('hide', !posQ); drawPosGrid(); }
 function posClear(){ $('posIn').value = ''; posQ = ''; $('posX').classList.add('hide'); drawPosGrid(); $('posIn').focus(); }
 function posSetCat(c){ posCat = c; drawPosCats(); drawPosGrid(); }
@@ -790,46 +808,56 @@ const posSub = () => Object.keys(posCart).reduce((t, id) => { const p = adm.find
 function posTotals(){ const sub = posSub(), disc = Math.min(Math.max(parseFloat($('posDisc').value) || 0, 0), sub), total = sub - disc, c = parseFloat($('posCash').value) || 0;
   const n = Object.keys(posCart).reduce((t, id) => t + posCart[id], 0);
   $('posTot').textContent = 'TOTAL: ' + peso(total); $('posChg').textContent = c ? (c >= total ? peso(c - total) : 'Short ' + peso(total - c)) : '';
-  $('posJump').textContent = `🧾 Current transaction · ${n} item${n === 1 ? '' : 's'} · ${peso(total)} ↓`; }
+  $('posSum').textContent = `${n} item${n === 1 ? '' : 's'} · ${peso(total)}`; }
 function posDraw(){ if(!$('posLines')) return; drawPosCats(); drawPosGrid(); const ids = Object.keys(posCart);
-  $('posLines').innerHTML = ids.length ? ids.map(id => { const p = adm.find(x => x.id === id); if(!p) return '';
+  $('posStrip').innerHTML = PST && PST.open ? stripHtml(PST.session.posStart, PST.totals.posBalance) : stripHtml(null, null);
+  $('posLines').innerHTML = ids.map(id => { const p = adm.find(x => x.id === id); if(!p) return '';
     return `<div class="line"><div><b>${esc(p.name)}</b><div class="muted">${peso(p.price)} each</div></div>
-      <div class="qty"><button class="alt" onclick="posQty('${id}',-1)">−</button><b>${posCart[id]}</b><button onclick="posQty('${id}',1)">+</button></div><div>${peso(p.price*posCart[id])}</div></div>`; }).join('')
-    : '<p class="muted">Tap a product or scan a barcode to start.</p>';
+      <div class="qty"><button class="alt" onclick="posQty('${id}',-1)">−</button><b>${posCart[id]}</b><button onclick="posQty('${id}',1)">+</button></div><div>${peso(p.price*posCart[id])}</div></div>`; }).join('');
   const note = $('posNote'); note.textContent = ST.open ? '' : 'The store is closed. Open the store to make sales.'; note.classList.toggle('hide', ST.open);
   $('posGo').disabled = !ids.length || !ST.open; posTotals(); }
 function posPay(btn){ const items = Object.keys(posCart).map(id => ({id, qty:posCart[id]})), c = parseFloat($('posCash').value) || 0, d = parseFloat($('posDisc').value) || 0;
-  run(async () => { const r = await api('posSale', S.token, items, c, d); posCart = {}; $('posCash').value = ''; $('posDisc').value = ''; adm = await api('adminGetProducts', S.token); posDraw();
+  run(async () => { const r = await api('posSale', S.token, items, c, d); posCart = {}; $('posCash').value = ''; $('posDisc').value = '';
+    [adm, PST] = await Promise.all([api('adminGetProducts', S.token), api('adminStoreState', S.token)]); posDraw();
     show('Sale ' + r.id + ' recorded: ' + peso(r.total) + (r.change ? ' · change ' + peso(r.change) : '') + '. Stock updated.', 'ok'); }, btn); }
 
-/* ----- Cash in / cash out ----- */
-function loadCash(){ return run(async () => { const st = await api('adminStoreState', S.token); ST.open = st.open; drawStoreBar(); drawCash(st); }); }
-function drawCash(st){ let h = '<h2>Cash in / out</h2>';
-  if(!st.open){ $('aCash').innerHTML = h + `<div class="card" style="margin-top:10px"><p>The store is closed. Open the store to record cash in and cash out.</p>${st.lastEnd != null ? `<p class="muted">Last closing money: ${peso(st.lastEnd)}</p>` : ''}<button class="go" onclick="openStoreDlg(this)">Open store</button></div>`; return; }
-  const t = st.totals;
-  h += `<div class="card" style="margin-top:10px"><div class="two"><div><div class="muted">Starting money</div><b style="font-size:1.2rem">${peso(st.session.startAmount)}</b></div>
-    <div><div class="muted">Current balance</div><b style="font-size:1.4rem;color:var(--blue)">${peso(t.balance)}</b></div></div>
-    <p class="muted" style="margin-top:8px">+ Cash in ${peso(t.inTotal)} (cash ${peso(t.inCash)} · QR ${peso(t.inQr)}) · − Released cash out ${peso(t.outReleased)}${t.outPending ? ' · ⏳ pending cash out ' + peso(t.outPending) : ''}<br>POS sales this session: ${peso(t.posTotal)} (${t.posCount})</p></div>
-  <div class="card" style="margin-top:12px"><h3>Cash in</h3>
-    <div class="two"><div><label for="ciMethod">How</label><select id="ciMethod" onchange="$('qrBox').classList.toggle('hide', this.value !== 'QR')"><option value="Cash">Cash</option><option value="QR">Scan QR</option></select></div>
-    <div><label for="ciAmt">Amount (₱)</label><input id="ciAmt" type="number" min="1" step="1"></div></div>
-    <div id="qrBox" class="hide" style="text-align:center;margin-top:8px">${QR ? `<img src="${esc(QR)}" alt="Store QR code" style="max-width:240px;width:100%">` : '<p class="muted">No QR image yet. Add its link as STORE_QR_URL in Vercel to show it here.</p>'}</div>
-    <label for="ciRef">Name or reference (optional)</label><input id="ciRef" maxlength="80">
-    <p><button class="go full" onclick="cashAdd('in', this)">Record cash in</button></p></div>
-  <div class="card" style="margin-top:12px"><h3>Cash out</h3>
-    <label for="coAmt">Reference amount (₱)</label><input id="coAmt" type="number" min="1" step="1">
-    <label for="coRef">Reference no. or name (optional)</label><input id="coRef" maxlength="80">
-    <p><button class="alt full" onclick="cashAdd('out', this)">Add cash out (pending until released)</button></p>
-    <p class="muted">Money is deducted from the balance only when you press Mark released.</p></div>
-  <div class="card" style="margin-top:12px"><h3>This session</h3>` + (st.entries.length ? st.entries.map(e => `<div class="prow" style="grid-template-columns:1fr auto">
-      <div><b>${e.kind === 'in' ? '＋ Cash in' : '－ Cash out'} ${peso(e.amount)}</b> <span class="badge ${e.status==='Done' || e.status==='Released' ? 'Complete' : e.status==='Pending' ? 'Pending' : 'Incomplete'}">${e.status}</span>
-        <div class="muted">${new Date(e.created).toLocaleTimeString('en-PH', {timeZone:'Asia/Manila', hour:'2-digit', minute:'2-digit'})}${e.kind === 'in' ? ' · ' + (e.method === 'QR' ? 'Scan QR' : 'Cash') : ''}${e.ref ? ' · ' + esc(e.ref) : ''} · ${esc(e.by)}</div></div>
-      <div class="acts">${e.status === 'Pending' ? `<button onclick="cashDo('adminCashRelease',${e.id},this)">Mark released</button><button class="alt del" onclick="cashDo('adminCashCancel',${e.id},this)">Cancel</button>` : ''}</div></div>`).join('') : '<p class="muted">No entries yet.</p>') + '</div>';
-  $('aCash').innerHTML = h; }
+/* ----- Cash in / cash out (tabs: Cash in | Cash out | List) ----- */
+let CS = null, cashTab = 'in', clType = 'all', clFrom = '', clTo = '';
+const svcFee = a => !(a > 0) ? 0 : a < 300 ? 5 : a <= 500 ? 10 : a < 1000 ? 15 : 20 * Math.ceil(a / 1000);
+function loadCash(){ return run(async () => { CS = await api('adminStoreState', S.token); ST.open = CS.open; drawStoreBar();
+  if(!clFrom) clFrom = clTo = manila().toISOString().slice(0, 10); drawCash(); if(cashTab === 'list') loadCashList(); }); }
+function drawCash(){ const st = CS;
+  if(!st.open){ $('aCash').innerHTML = stripHtml(null, null) + `<div class="card" style="margin-top:8px"><p>The store is closed. Open the store to record cash in and cash out.</p><button class="go" onclick="openStoreDlg(this)">Open store</button></div>`; return; }
+  const tab = (k, t) => `<button class="${cashTab === k ? 'on' : ''}" onclick="setCashTab('${k}')">${t}</button>`;
+  $('aCash').innerHTML = stripHtml(st.session.startAmount, st.totals.balance) + `<div class="segs">${tab('in', 'Cash in')}${tab('out', 'Cash out')}${tab('list', 'List')}</div><div id="cashBody"></div>`;
+  drawCashBody(); }
+function setCashTab(t){ cashTab = t; drawCash(); if(t === 'list') loadCashList(); }
+function feeUpdate(kind){ const a = parseFloat($(kind === 'in' ? 'ciAmt' : 'coAmt').value) || 0, f = svcFee(a);
+  $('feeLine').textContent = a > 0 ? (kind === 'in' ? `Service charge ${peso(f)} · collect ${peso(a + f)}` : `Service charge ${peso(f)} · release ${peso(a)} and collect the ${peso(f)} fee`) : ''; }
+function drawCashBody(){ const b = $('cashBody');
+  if(cashTab === 'in') b.innerHTML = `<div class="card"><div class="two"><div><label for="ciMethod">How</label><select id="ciMethod" onchange="$('qrBox').classList.toggle('hide', this.value !== 'QR')"><option value="Cash">Cash</option><option value="QR">Scan QR</option></select></div>
+      <div><label for="ciAmt">Amount (₱)</label><input id="ciAmt" type="number" min="1" step="1" oninput="feeUpdate('in')"></div></div>
+    <div id="qrBox" class="hide" style="text-align:center;margin-top:8px">${QR ? `<img src="${esc(QR)}" alt="Store QR code" style="max-width:240px;width:100%">` : '<p class="muted">Add your QR image link as STORE_QR_URL in Vercel to show it here.</p>'}</div>
+    <label for="ciRef">Name or reference (optional)</label><input id="ciRef" maxlength="80"><div class="feeline" id="feeLine"></div>
+    <button class="go full" onclick="cashAdd('in', this)">Record cash in</button></div>`;
+  else if(cashTab === 'out') b.innerHTML = `<div class="card"><label for="coAmt">Reference amount (₱)</label><input id="coAmt" type="number" min="1" step="1" oninput="feeUpdate('out')">
+    <label for="coRef">Reference no. or name (optional)</label><input id="coRef" maxlength="80"><div class="feeline" id="feeLine"></div>
+    <button class="alt full" onclick="cashAdd('out', this)">Add cash out (pending until released)</button></div>`;
+  else { b.innerHTML = `<div class="card"><div class="three"><div><label for="clType">Type</label><select id="clType" onchange="clType=this.value;loadCashList()"><option value="all">All</option><option value="in">Cash in</option><option value="out">Cash out</option></select></div>
+      <div><label for="clFrom">From</label><input id="clFrom" type="date" value="${clFrom}" onchange="clFrom=this.value;loadCashList()"></div>
+      <div><label for="clTo">To</label><input id="clTo" type="date" value="${clTo}" onchange="clTo=this.value;loadCashList()"></div></div><div id="clOut" style="margin-top:8px"></div></div>`; $('clType').value = clType; } }
+function loadCashList(){ return run(async () => drawCashList(await api('adminCashList', S.token, clType, clFrom, clTo))); }
+function drawCashList(rows){ const done = rows.filter(e => e.status === 'Done' || e.status === 'Released'), sum = (k, f) => done.filter(e => e.kind === k).reduce((t, e) => t + e[f], 0);
+  const when = e => new Date(e.created).toLocaleString('en-PH', {timeZone:'Asia/Manila', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false});
+  $('clOut').innerHTML = `<div class="muted">${rows.length} entr${rows.length === 1 ? 'y' : 'ies'} · in ${peso(sum('in', 'amount'))} · out ${peso(sum('out', 'amount'))} · service charges ${peso(done.reduce((t, e) => t + e.fee, 0))}</div>` +
+    (rows.map(e => `<div class="prow" style="grid-template-columns:1fr auto"><div><b>${e.kind === 'in' ? '＋ Cash in' : '－ Cash out'} ${peso(e.amount)}</b> <span class="muted">+ fee ${peso(e.fee)}</span>
+      <span class="badge ${e.status === 'Done' || e.status === 'Released' ? 'Complete' : e.status === 'Pending' ? 'Pending' : 'Incomplete'}">${e.status}</span>
+      <div class="muted">${when(e)}${e.kind === 'in' ? ' · ' + (e.method === 'QR' ? 'Scan QR' : 'Cash') : ''}${e.ref ? ' · ' + esc(e.ref) : ''} · ${esc(e.by)}</div></div>
+      <div class="acts">${e.status === 'Pending' && CS.open && e.sessionId === CS.session.id ? `<button onclick="cashDo('adminCashRelease',${e.id},this)">Mark released</button><button class="alt del" onclick="cashDo('adminCashCancel',${e.id},this)">Cancel</button>` : ''}</div></div>`).join('') || '<p class="muted">No entries for this filter.</p>'); }
 function cashAdd(kind, btn){ const amt = parseFloat($(kind === 'in' ? 'ciAmt' : 'coAmt').value);
   run(async () => { await api('adminCashAdd', S.token, kind, kind === 'in' ? $('ciMethod').value : 'Cash', amt, $(kind === 'in' ? 'ciRef' : 'coRef').value); await loadCash();
-    show(kind === 'in' ? 'Cash in recorded.' : 'Cash out added. Press Mark released when the cash is handed over.', 'ok'); }, btn); }
-function cashDo(fn, id, btn){ run(async () => { await api(fn, S.token, id); await loadCash(); show(fn === 'adminCashRelease' ? 'Released. The balance was reduced.' : 'Cancelled.', 'ok'); }, btn); }
+    show(kind === 'in' ? 'Cash in recorded.' : 'Cash out added. Open the List tab and press Mark released when the cash is handed over.', 'ok'); }, btn); }
+function cashDo(fn, id, btn){ run(async () => { await api(fn, S.token, id); await loadCash(); show(fn === 'adminCashRelease' ? 'Released. The balance was updated.' : 'Cancelled.', 'ok'); }, btn); }
 
 /* ----- Delivery rider screen ----- */
 function riderCard(o){
@@ -850,7 +878,7 @@ function respond(id, action, btn){ run(async () => { await api('riderRespond', S
 api('getInfo').then(i => { ADDR = i.address; STORE = i.name; CLD = {cloud:i.cloud || '', preset:i.preset || ''}; applyInfo(i);
   if(i.emailCodes) $('codeLink').classList.remove('hide');
   document.querySelectorAll('.stName').forEach(e => e.textContent = STORE); document.querySelectorAll('.stAddr').forEach(e => e.textContent = ADDR); toggleAddr(); }).catch(() => {});
-try { new ResizeObserver(() => document.documentElement.style.setProperty('--hh', $('top').offsetHeight + 'px')).observe($('top')); } catch(e){}
+try { const ro = new ResizeObserver(() => { const st = document.documentElement.style; st.setProperty('--hh', $('top').offsetHeight + 'px'); st.setProperty('--bnh', ($('bnA').offsetHeight || 60) + 'px'); }); ro.observe($('top')); ro.observe($('bnA')); } catch(e){}
 cart = load('sariC') || {};
 const saved = load('sariA');
 if(saved && saved.token){ S = saved; startAdmin(); }
