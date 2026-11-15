@@ -21,3 +21,6 @@ create table if not exists cash_entries (id serial primary key, session_id int n
 create table if not exists pos_sales (id text primary key, session_id int, created timestamptz not null default now(), by_email text not null,
   items jsonb not null, total numeric not null, cash numeric);
 alter table pos_sales add column if not exists discount numeric not null default 0;
+alter table store_sessions add column if not exists pos_start numeric not null default 0;
+alter table store_sessions add column if not exists pos_end numeric;
+alter table cash_entries add column if not exists fee numeric not null default 0;
