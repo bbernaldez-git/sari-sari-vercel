@@ -8,7 +8,10 @@
 <style>
 :root{--blue:#1d4e9e;--mango:#f6b21b;--chili:#c8372d;--leaf:#2e7d4f;--bg:#eaf0f8;--ink:#14213d;--card:#fff;--line:#c9d6ea}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+html{font-size:15px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;max-width:100%;overflow-x:hidden;overflow-x:clip;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+h2{font-size:1.2rem}h3{font-size:1rem}
+img{max-width:100%}
 h1,h2,h3{font-family:'Baloo 2',system-ui,sans-serif;margin:0;line-height:1.1}
 header{position:sticky;top:0;z-index:25;background:var(--blue);color:#fff;border-bottom:6px solid var(--mango);padding:8px 16px;display:flex;gap:6px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .hd-brand{flex:1 1 230px;min-width:0}
@@ -21,7 +24,7 @@ header h1{font-size:1.25rem;color:var(--mango);cursor:pointer}
 .addr{font-size:.78rem;opacity:.9}
 main{max-width:1060px;margin:0 auto;padding:16px 16px 100px}
 button,input,select,textarea{font:inherit}
-button{cursor:pointer;border:0;border-radius:8px;padding:8px 12px;background:var(--blue);color:#fff;font-weight:600}
+button{font-size:.88rem;cursor:pointer;border:0;border-radius:8px;padding:7px 11px;background:var(--blue);color:#fff;font-weight:600}
 button.alt{background:#fff;color:var(--blue);border:2px solid var(--blue)}
 button.go{background:var(--chili)}
 button.hd{background:transparent;color:#fff;border:2px solid #ffffff80;padding:6px 12px}
@@ -31,11 +34,11 @@ button.full{width:100%}
 button.del{color:var(--chili);border-color:var(--chili)}
 button:disabled{opacity:.5;cursor:default}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-input,select,textarea{width:100%;padding:9px 10px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
-label{display:block;font-weight:600;margin:10px 0 4px}
-.card{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:14px}
+input,select,textarea{font-size:.92rem;width:100%;padding:7px 9px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+label{display:block;font-weight:600;font-size:.85rem;margin:8px 0 3px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:12px}
 .narrow{max-width:520px;margin:12px auto}
-.muted{color:#55657f;font-size:.88rem}
+.muted{color:#55657f;font-size:.8rem}
 .msg{padding:10px 12px;border-radius:8px;margin:10px 0;font-weight:600}
 .msg.err{background:#fde5e2;color:#8a1f17}.msg.ok{background:#dff3e6;color:#1d5a37}
 .row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
@@ -81,8 +84,9 @@ main.wide{max-width:1400px}
 .pos-panel .line{border-bottom:0;padding:5px 0;gap:6px;font-size:.85rem}.pos-panel .line b{font-size:.85rem}.pos-panel .line .muted{font-size:.72rem}.pos-panel .line .qty button{padding:2px 10px}
 .pos-total{background:var(--leaf);color:#fff;text-align:center;border-radius:10px;padding:10px;font-weight:800;font-size:1.1rem;font-family:'Baloo 2',sans-serif}.pos-pay{padding:12px;font-size:1rem}
 @media(min-width:1000px){
-  .pos{display:grid;grid-template-columns:170px 1fr 340px;gap:14px;align-items:start}
-  .pos-main{display:block}
+  .pos{display:grid;grid-template-columns:170px minmax(0,1fr) 340px;gap:14px;align-items:start}
+  .pos-cats,.pos-search,.pos-grid,#posNote{order:0}
+  .pos-cats{grid-column:1;grid-row:1}.pos-main{display:block;grid-column:2;grid-row:1;min-width:0}.pos-panel{grid-column:3;grid-row:1}
   .pos-search{height:auto;padding:8px 0 6px}
   .pos-cats{flex-direction:column;align-items:stretch;overflow-y:auto;height:auto;background:transparent;padding:0;top:calc(var(--hh,0px) + 56px);max-height:calc(100vh - var(--hh,0px) - 46px - 130px)}
   .pcat{white-space:normal;text-align:left;display:flex;justify-content:space-between;gap:6px}
@@ -90,10 +94,17 @@ main.wide{max-width:1400px}
   .pos-panel{position:sticky;top:calc(var(--hh,0px) + 56px);left:auto;right:auto;bottom:auto;height:calc(100vh - var(--hh,0px) - 46px - 134px);max-height:none;border-radius:12px;box-shadow:0 1px 2px #1d4e9e1f;z-index:1;padding:12px}
   .pos-caret,.pos-sum{display:none}.pos-head{cursor:default}
   .pos-panel .pos-body,.pos-panel:not(.open) .pos-body{display:flex}#posLines{max-height:none}}
+.ib{min-width:34px;padding:6px 10px;line-height:1.1;font-size:.95rem}
+.pill.tog{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 6px}
+.pill.tog i{width:34px;height:18px;border-radius:99px;background:#9aa7bd;position:relative;flex:none}
+.pill.tog i::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}
+.pill.tog.open i{background:var(--leaf)}.pill.tog.open i::after{left:18px}
+.pos-act button,.acts button{line-height:1.1}
+@media(max-width:700px){input,select,textarea{font-size:16px!important}}
 .hide{display:none!important}.hide{display:none!important}
 /* fixed bottom navigation */
 .bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
-.bn button{flex:1;background:none;color:var(--ink);border-radius:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.82rem}
+.bn button{font-size:.74rem;flex:1;background:none;color:var(--ink);border-radius:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.82rem}
 .bn button b{font-size:1.25rem;line-height:1}
 .bn button.on{background:#e3ebf8;color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
 /* shop */
@@ -186,10 +197,10 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
 
   <!-- Customer: cart -->
   <div id="cart" class="v hide">
-    <div class="row"><h2>Your cart</h2><button class="alt del hide" id="emptyBtn" onclick="clearCart()">🗑 Empty cart</button></div>
+    <div class="row"><h2>Your cart</h2><button class="alt del ib hide" id="emptyBtn" title="Empty cart" aria-label="Empty cart" onclick="clearCart()">🗑</button></div>
     <div class="card" style="margin-top:10px">
       <div id="cartLines"></div>
-      <div class="row" style="margin-top:10px"><b id="total"></b><button class="alt" onclick="view('shop')">+ Add more items</button></div>
+      <div class="row" style="margin-top:10px"><b id="total"></b><button class="alt" title="Add more items" onclick="view('shop')">＋ Add items</button></div>
     </div>
     <div class="card hide" id="co" style="margin-top:12px">
       <h3>Your details</h3>
@@ -223,7 +234,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <!-- Customer: track + 30-day history -->
   <div id="track" class="v hide">
     <div class="card">
-      <button class="alt" onclick="view('shop')">← Back to store</button>
+      <button class="alt" onclick="view('shop')">← Back</button>
       <h2 style="margin-top:12px">My orders <span class="muted">(last 30 days on this device)</span></h2>
       <p class="muted" id="histSum"></p>
       <div id="hist"></div>
@@ -240,7 +251,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
 
   <!-- Admin sign-in -->
   <div id="login" class="v hide card narrow">
-    <button class="alt" onclick="view('shop')">← Back to store</button>
+    <button class="alt" onclick="view('shop')">← Back</button>
     <h2 style="margin-top:12px">Staff sign-in</h2>
     <div id="stepEmail"><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="email">
       <div id="pwBox"><label for="lPw">Password</label><input id="lPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginPw()"></div>
@@ -278,7 +289,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <div id="pErr"></div>
   <label for="pName">Product name</label><input id="pName" onblur="autoTags()">
   <label for="pBar">Barcode <span class="muted">(optional, used by POS)</span></label>
-  <div class="row" style="flex-wrap:nowrap"><input id="pBar" inputmode="numeric" autocomplete="off"><button class="alt" onclick="openScan(c => { $('pBar').value = c; return 'Got ' + c; }, true)">📷 Scan</button></div>
+  <div class="row" style="flex-wrap:nowrap"><input id="pBar" inputmode="numeric" autocomplete="off"><button class="alt ib" title="Scan the barcode" aria-label="Scan the barcode" onclick="openScan(c => { $('pBar').value = c; return 'Got ' + c; }, true)">📷</button></div>
   <label>Product image</label>
   <div class="row" style="justify-content:flex-start"><div class="pimg thumb" id="pPrev" style="width:80px;height:80px"></div>
     <div style="flex:1;min-width:180px"><input type="file" id="pFile" accept="image/*" onchange="pickImg(this)">
@@ -506,7 +517,7 @@ function riderBlock(o, admin){
 function assignHtml(o){
   if(o.method !== 'Delivery' || (o.rider && o.deliveryStatus !== 'Declined')) return '';
   const opts = riders.map(r => `<option value="${r.id}">${esc(r.name)} ${r.online ? '(online)' : '(offline)'}</option>`).join('');
-  return riders.length ? `<p class="row" style="justify-content:flex-start"><select id="rs_${o.id}" style="max-width:260px">${opts}</select><button class="alt" onclick="assignRider('${o.id}', this)">Assign rider</button></p>` : '<div class="muted">No riders set up yet (Staff tab).</div>'; }
+  return riders.length ? `<p class="row" style="justify-content:flex-start"><select id="rs_${o.id}" style="max-width:260px">${opts}</select><button class="alt" onclick="assignRider('${o.id}', this)">Assign</button></p>` : '<div class="muted">No riders set up yet (Staff tab).</div>'; }
 function orderHtml(o, admin){
   const miss = o.missing.map(m => m.id);
   return `<div class="card order" id="o_${o.id}">
@@ -561,21 +572,22 @@ async function poll(){ /* also keeps this person marked online */
 /* ----- Admin orders: last 7 days, search by name / mobile / order number ----- */
 const digits = s => String(s).replace(/\D/g, ''), idk = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
 function loadAdminOrders(){
-  if(!$('oList')) $('aOrders').innerHTML = `<div class="row" style="justify-content:flex-start"><div class="sw" style="max-width:520px"><input id="oSearch" type="search" placeholder="Search name, mobile number or order number" aria-label="Search orders" oninput="oq=this.value;$('oSx').classList.toggle('hide',!oq);drawOrders()">
-    <button class="x hide" id="oSx" aria-label="Clear search" onclick="oq='';$('oSearch').value='';this.classList.add('hide');drawOrders()">×</button></div><button class="alt" onclick="resetOrders()">↻ Clear &amp; refresh</button></div>
-    <nav class="tabs" id="oTabs"></nav><p class="muted" id="oInfo"></p><div id="oList"></div>`;
-  run(async () => { [aData, riders] = await Promise.all([api('adminGetOrders', S.token), api('getRiders')]); drawOrders(); }); }
+  if(!$('oList')) $('aOrders').innerHTML = `<div class="row" style="justify-content:flex-start;flex-wrap:nowrap;gap:6px"><div class="sw" style="max-width:520px;min-width:90px"><input id="oSearch" type="search" placeholder="Search name, mobile number or order number" aria-label="Search orders" oninput="oq=this.value;$('oSx').classList.toggle('hide',!oq);drawOrders()">
+    <button class="x hide" id="oSx" aria-label="Clear search" onclick="oq='';$('oSearch').value='';this.classList.add('hide');drawOrders()">×</button></div><input id="oDay" type="date" title="Show orders for this day" aria-label="Day" style="width:auto;flex:none" onchange="oDay=this.value;loadAdminOrders()"><button class="alt ib" title="Clear and refresh (today)" aria-label="Clear and refresh" onclick="resetOrders()">↻</button></div>
+    <div class="segs" id="oTabs"></div><p class="muted" id="oInfo"></p><div id="oList"></div>`;
+  if($('oDay')) $('oDay').value = oDay || manila().toISOString().slice(0, 10);
+  return run(async () => { [aData, riders] = await Promise.all([api('adminGetOrders', S.token, oDay), api('getRiders')]); drawOrders(); }); }
 function assignRider(id, btn){ run(async () => { await api('adminAssignRider', S.token, id, $('rs_' + id).value); await loadAdminOrders(); show('Rider assigned. They will see the request.', 'ok'); }, btn); }
-function resetOrders(){ oq = ''; aFilter = 'All'; const i = $('oSearch'); if(i) i.value = ''; $('oSx').classList.add('hide'); loadAdminOrders(); }
+function resetOrders(){ oq = ''; oDay = ''; aFilter = 'All'; const i = $('oSearch'); if(i) i.value = ''; $('oSx').classList.add('hide'); loadAdminOrders(); }
 function resetInv(){ aq = ''; loadAdminProducts(); }
 function drawOrders(){
   const t = norm(oq).trim(), d = digits(oq), k = idk(oq);
   const hit = o => norm(o.name).includes(t) || (d && digits(o.contact).includes(d)) || (k && idk(o.id).includes(k));
   const c = s => aData.filter(o => o.status===s).length;
   $('oTabs').innerHTML = ['Pending','Complete','Incomplete','All'].map(s =>
-    `<button class="tab ${!t && s===aFilter?'on':''}" onclick="aFilter='${s}';oq='';$('oSearch').value='';$('oSx').classList.add('hide');drawOrders()">${s} (${s==='All'?aData.length:c(s)})</button>`).join('');
+    `<button class="${!t && s===aFilter?'on':''}" onclick="aFilter='${s}';oq='';$('oSearch').value='';$('oSx').classList.add('hide');drawOrders()">${s} (${s==='All'?aData.length:c(s)})</button>`).join('');
   const f = t ? aData.filter(hit) : (aFilter==='All' ? aData : aData.filter(o => o.status===aFilter));
-  $('oInfo').textContent = t ? `${f.length} match${f.length===1?'':'es'} for "${oq}" in the last 7 days (pending orders always shown)` : 'Showing the last 7 days · pending orders always shown';
+  $('oInfo').textContent = t ? `${f.length} match${f.length===1?'':'es'} for "${oq}" on this day (unconfirmed orders from other days are always shown)` : (oDay && oDay !== manila().toISOString().slice(0, 10) ? 'Orders for ' + oDay : 'Today') + ' · unconfirmed orders from other days are always shown · older orders are in Reports';
   $('oList').innerHTML = f.map(o => orderHtml(o, true)).join('') || '<p>No orders here.</p>'; }
 function review(id, btn){
   const missing = [...document.querySelectorAll('#o_'+id+' input[type=checkbox]:checked')].map(c => c.value);
@@ -588,7 +600,7 @@ function review(id, btn){
 const cats = () => [...new Set(adm.map(p => p.category).filter(Boolean))].sort();
 function loadAdminProducts(){
   $('aProducts').innerHTML = `<div class="row" style="margin-bottom:10px"><div class="sw"><input id="aSearch" type="search" placeholder="Search inventory" aria-label="Search inventory" oninput="aq=this.value;$('aSx').classList.toggle('hide',!aq);drawAdm()"><button class="x hide" id="aSx" aria-label="Clear search" onclick="aq='';$('aSearch').value='';this.classList.add('hide');drawAdm()">×</button></div>
-    <button class="alt" onclick="resetInv()">↻ Clear &amp; refresh</button> <button class="go" onclick="editProd()">+ Add product</button></div><div class="card" id="admList"></div>`;
+    <button class="alt ib" title="Clear and refresh" aria-label="Clear and refresh" onclick="resetInv()">↻</button> <button class="go ib" title="Add product" aria-label="Add product" onclick="editProd()">＋</button></div><div class="card" id="admList"></div>`;
   return run(async () => { adm = await api('adminGetProducts', S.token); drawAdm(); }); }
 function drawAdm(){
   const terms = norm(aq).split(/\s+/).filter(Boolean);
@@ -597,7 +609,7 @@ function drawAdm(){
   $('admList').innerHTML = `<div class="prow head"><div>Product</div><div>Base price</div><div>Stock</div><div></div></div>` +
     (f.map(p => `<div class="prow"><div style="display:flex;gap:10px;align-items:center"><div class="pimg thumb">${imgTag(p.image, 90)}</div><div><b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div></div>
       <div>${peso(p.price)}</div><div class="${p.stock<=5?'miss':''}">${p.stock}</div>
-      <div class="acts"><button class="alt" onclick="editProd('${p.id}')">Edit</button>${S.role==='admin' ? `<button class="alt del" onclick="delProd('${p.id}')">Delete</button>` : ''}</div></div>`).join('')
+      <div class="acts"><button class="alt ib" title="Edit" aria-label="Edit" onclick="editProd('${p.id}')">✎</button>${S.role==='admin' ? `<button class="alt del ib" title="Delete" aria-label="Delete" onclick="delProd('${p.id}')">🗑</button>` : ''}</div></div>`).join('')
     || '<p>No products found.</p>') + `<p class="muted">${f.length} of ${adm.length} products · ${adm.filter(p => p.image).length} with images saved</p>`; }
 function editProd(id){
   const p = adm.find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[]};
@@ -646,14 +658,14 @@ function delProd(id){ const p = adm.find(x => x.id===id);
 /* ----- Staff management (owner) ----- */
 let staffList = [];
 async function loadStaff(){
-  $('aStaff').innerHTML = '<div class="row" style="margin-bottom:10px"><h2>Staff</h2><span><button class="alt" onclick="testEmail(this)">✉ Send test email</button> <button class="go" onclick="editStaff()">+ Add staff</button></span></div><div class="card" id="stList"></div>';
+  $('aStaff').innerHTML = '<div class="row" style="margin-bottom:10px"><h2>Staff</h2><span><button class="alt ib" title="Send a test email" aria-label="Send a test email" onclick="testEmail(this)">✉</button> <button class="go ib" title="Add staff" aria-label="Add staff" onclick="editStaff()">＋</button></span></div><div class="card" id="stList"></div>';
   return run(async () => { staffList = await api('adminListStaff', S.token); drawStaff(); }); }
 function testEmail(btn){ run(async () => { const r = await api('adminTestEmail', S.token); show('Test email sent to ' + r.sentTo + '. Check your inbox (and spam).', 'ok'); }, btn); }
 function drawStaff(){
   $('stList').innerHTML = staffList.map(s => `<div class="prow" style="grid-template-columns:1fr auto"><div><b><span class="dot ${s.online?'live':'idle'}"></span>${esc(s.name)}</b>
     <span class="muted"> · ${s.role==='delivery' ? 'Delivery rider' : 'Cashier'} · ${s.online ? 'Online' : 'Offline'}${s.active ? '' : ' · Disabled'}</span>
     <div class="muted">${esc(s.email)} · ${esc(s.phone)}</div></div>
-    <div class="acts"><button class="alt" onclick="editStaff('${esc(s.email)}')">Edit</button><button class="alt del" onclick="delStaff('${esc(s.email)}')">Remove</button></div></div>`).join('')
+    <div class="acts"><button class="alt ib" title="Edit" aria-label="Edit" onclick="editStaff('${esc(s.email)}')">✎</button><button class="alt del ib" title="Remove" aria-label="Remove" onclick="delStaff('${esc(s.email)}')">🗑</button></div></div>`).join('')
     || '<p>No staff yet. Add a cashier or a delivery rider.</p>'; }
 function editStaff(email){ const s = staffList.find(x => x.email===email) || {name:'', email:'', phone:'', role:'cashier', active:true};
   $('sdTitle').textContent = email ? 'Edit staff' : 'Add staff'; $('sErr').innerHTML = ''; $('sd').dataset.edit = email || '';
@@ -692,17 +704,23 @@ function loadReports(){ const [f, t] = monthRange(0);
   $('aReports').innerHTML = `<h2>Reports</h2>
   <div class="card" style="margin-top:10px"><div class="two"><div><label for="rFrom">From</label><input id="rFrom" type="date" value="${f}"></div><div><label for="rTo">To</label><input id="rTo" type="date" value="${t}"></div></div>
     <p class="links"><button class="alt" onclick="setRange(0)">This month</button><button class="alt" onclick="setRange(-1)">Last month</button><button class="alt" onclick="setRange(-2)">Last 2 months</button></p>
-    <p class="links"><button onclick="dl('orders',this)">⬇ Orders (CSV)</button><button onclick="dl('items',this)">⬇ Items sold (CSV)</button><button onclick="dl('daily',this)">⬇ Daily sales (CSV)</button></p>
+    <p class="links"><button title="Download orders (CSV)" onclick="dl('orders',this)">⬇ Orders</button><button title="Download items sold (CSV)" onclick="dl('items',this)">⬇ Items</button><button title="Download daily sales (CSV)" onclick="dl('daily',this)">⬇ Daily</button><button title="Download cash in and cash out (CSV)" onclick="dl('cash',this)">⬇ Cash</button></p>
     <p class="muted" id="rSum">CSV files open in Excel or Google Sheets. Sales count Complete and Incomplete orders (missing items are deducted).</p></div>
   <div class="card" style="margin-top:12px"><h3>Storage and cleanup</h3><p id="stor" class="muted">Checking…</p>
-    <p class="links"><button class="alt" onclick="dlOld(this)">⬇ Download old orders (CSV)</button><button class="alt del" id="purgeBtn" disabled onclick="purgeOld(this)">🗑 Delete orders older than 2 months</button></p>
+    <p class="links"><button class="alt" title="Download orders older than 2 months (CSV)" onclick="dlOld(this)">⬇ Old orders</button><button class="alt del" id="purgeBtn" title="Delete orders older than 2 months" disabled onclick="purgeOld(this)">🗑 Delete old</button></p>
     <p class="muted">Keep only the last 2 months in the database to stay within the free plan. Download the old orders first, then delete them. Pending orders are never deleted.</p></div>`;
   run(async () => { const x = await api('adminStorage', S.token); window.oldCount = x.oldCount;
     $('stor').textContent = `Database size: ${x.sizeMb} MB of about 512 MB · ${x.totalOrders} orders stored · ${x.oldCount} order(s) older than 2 months` + (x.oldCount ? ' (download, then delete them)' : ' ✓');
     if(!x.oldCount) $('purgeBtn').classList.add('hide'); }); }
 function setRange(off){ const [f, t] = monthRange(off === -2 ? -1 : off); $('rFrom').value = off === -2 ? monthRange(-1)[0] : f; $('rTo').value = off === -2 ? monthRange(0)[1] : t; }
-function dl(kind, btn){ run(async () => { const f = $('rFrom').value, t = $('rTo').value, list = await api('adminReport', S.token, f, t);
-    const rows = reportRows(kind, list), done = list.filter(o => o.status !== 'Pending');
+const cashRows = list => { const done = list.filter(e => e.status === 'Done' || e.status === 'Released'), sum = (k, f) => done.filter(e => e.kind === k).reduce((t, e) => t + e[f], 0);
+  return [['Date (PH time)','Type','How','Amount','Service charge','Status','Name or reference','By']]
+    .concat(list.map(e => [new Date(e.created).toLocaleString('en-PH', {timeZone:'Asia/Manila', hour12:false}), e.kind === 'in' ? 'Cash in' : 'Cash out', e.kind === 'in' ? (e.method === 'QR' ? 'Scan QR' : 'Cash') : 'Cash', e.amount, e.fee, e.status, e.ref, e.by]))
+    .concat([[], ['Total cash in', '', '', sum('in', 'amount'), sum('in', 'fee')], ['Total cash out (released)', '', '', sum('out', 'amount'), sum('out', 'fee')], ['Service charges earned', '', '', done.reduce((t, e) => t + e.fee, 0)]]); };
+function dl(kind, btn){ run(async () => { const f = $('rFrom').value, t = $('rTo').value;
+    if(kind === 'cash'){ const rows = await api('adminCashList', S.token, 'all', f, t); downloadCsv(`cash_${f}_to_${t}.csv`, cashRows(rows));
+      const done = rows.filter(e => e.status === 'Done' || e.status === 'Released'); $('rSum').textContent = `${rows.length} cash entries · service charges ${peso(done.reduce((s, e) => s + e.fee, 0))}`; return; }
+    const list = await api('adminReport', S.token, f, t), rows = reportRows(kind, list), done = list.filter(o => o.status !== 'Pending');
     downloadCsv(`${kind}_${f}_to_${t}.csv`, rows);
     $('rSum').textContent = `${list.length} orders in this period · ${done.length} confirmed · sales ${peso(done.reduce((s, o) => s + netOf(o), 0))}`; }, btn); }
 function dlOld(btn){ run(async () => { const c = new Date(manila().getTime() - 60*864e5).toISOString().slice(0, 10), list = await api('adminReport', S.token, '2000-01-01', c);
@@ -719,14 +737,13 @@ function applyInfo(i){ OPEN = !!i.open; DELIVERY_ON = !!i.delivery; QR = i.qr ||
   const b = $('place'); b.disabled = !OPEN; b.textContent = OPEN ? 'Place order' : 'Store is closed'; }
 setInterval(() => { if(!S) api('getInfo').then(applyInfo).catch(() => {}); }, 30000);
 let barUntil = 0, barTimer;
-function drawPill(){ const p = $('stPill'); if(S && S.role === 'delivery'){ p.classList.add('hide'); return; } const open = S ? ST.open : OPEN;
-  p.className = 'pill ' + (open ? 'open' : 'closed') + (S ? ' tap' : ''); p.textContent = open ? '🟢 Open' : '🔴 Closed'; p.title = open ? 'The store is open' : 'The store is closed'; }
-function flashBar(ms){ barUntil = Date.now() + ms; drawStoreBar(); clearTimeout(barTimer); barTimer = setTimeout(drawStoreBar, ms + 100); }
-function pillClick(){ if(S && S.role !== 'delivery') flashBar(8000); }
-function drawStoreBar(){ drawPill(); const b = $('storeBar'); if(!S || S.role === 'delivery'){ b.classList.add('hide'); return; } $('closedBar').classList.add('hide');
-  b.innerHTML = ST.open ? '<span>🟢 <b>Store is OPEN</b></span><button class="alt del" onclick="closeStore(this)">Close store</button>'
-    : '<span>🔴 <b>Store is CLOSED</b> · customers cannot order</span><button class="go" onclick="openStoreDlg(this)">Open store</button>';
-  b.classList.toggle('hide', ST.open && Date.now() > barUntil); }
+function drawPill(){ const p = $('stPill'); if(S && S.role === 'delivery'){ p.classList.add('hide'); return; } p.classList.remove('hide'); const open = S ? ST.open : OPEN;
+  if(S){ p.className = 'pill tog tap ' + (open ? 'open' : 'closed'); p.innerHTML = '<i></i><span>' + (open ? 'Open' : 'Closed') + '</span>';
+    p.title = open ? 'The store is open. Click to close it.' : 'The store is closed. Click to open it.'; p.setAttribute('role', 'switch'); p.setAttribute('aria-checked', open); }
+  else { p.className = 'pill ' + (open ? 'open' : 'closed'); p.textContent = open ? '🟢 Open' : '🔴 Closed'; p.title = open ? 'The store is open' : 'The store is closed'; p.removeAttribute('role'); } }
+function flashBar(){ drawStoreBar(); }
+function pillClick(){ if(S && S.role !== 'delivery'){ if(ST.open) closeStore($('stPill')); else openStoreDlg($('stPill')); } }
+function drawStoreBar(){ drawPill(); $('storeBar').classList.add('hide'); if(S) $('closedBar').classList.add('hide'); }
 async function refreshStore(){ try { const i = await api('getInfo'); if(!!i.open !== ST.open){ ST.open = !!i.open; flashBar(4000); } } catch(e){} }
 function openStoreDlg(btn){ run(async () => { const st = await api('adminStoreState', S.token); if(st.open){ ST.open = true; drawStoreBar(); return; }
   $('odPos').value = st.lastPosEnd != null ? st.lastPosEnd : 0; $('odAmt').value = st.lastEnd != null ? st.lastEnd : 0;
@@ -736,7 +753,7 @@ async function openStore(){ $('odBtn').disabled = true;
   try { await api('adminStoreOpen', S.token, parseFloat($('odAmt').value), parseFloat($('odPos').value)); $('od').close(); ST.open = true; flashBar(4000); show('Store is open. Customers can order now.', 'ok'); if(cur==='aCash' || cur==='aPos') view(cur); }
   catch(e){ $('odNote').textContent = e.message || String(e); }
   $('odBtn').disabled = false; }
-function closeStore(btn){ if(!confirm('Close the store? Customers will not be able to place orders.')) return;
+function closeStore(btn){ if(!confirm('Close the store?\n\nCustomers will not be able to place orders until you open it again.')) return;
   run(async () => { const r = await api('adminStoreClose', S.token); ST.open = false; drawStoreBar(); if(cur==='aCash' || cur==='aPos') view(cur); show('Store closed. Cash in/out: ' + peso(r.endAmount) + ' · POS: ' + peso(r.posEnd) + '.', 'ok'); }, btn); }
 
 /* ----- Barcode scanner (phone camera; also works with a USB/Bluetooth scanner typing into the box) ----- */
@@ -771,12 +788,12 @@ function loadPos(){
     <aside class="pos-cats" id="posCats" aria-label="Categories"></aside>
     <section class="pos-main">
       <div class="row pos-search" style="flex-wrap:nowrap"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
-        <button onclick="openScan(posScanned, false)">📷 Scan</button></div>
+        <button class="ib" title="Scan a barcode with the camera" aria-label="Scan a barcode" onclick="openScan(posScanned, false)">📷</button></div>
       <p class="msg err hide" id="posNote" style="margin:8px 0 0"></p>
       <div class="pos-grid" id="posGrid"></div>
     </section>
     <section class="pos-panel card" id="posPanel">
-      <div class="pos-head" onclick="posToggle()"><b>Current transaction</b><span class="pos-sum" id="posSum"></span><span class="pos-act"><button class="alt del" onclick="event.stopPropagation();posReset()">Clear</button><span class="pos-caret">▲</span></span></div>
+      <div class="pos-head" onclick="posToggle()"><b>Current transaction</b><span class="pos-sum" id="posSum"></span><span class="pos-act"><button class="alt del ib" title="Clear the sale" aria-label="Clear the sale" onclick="event.stopPropagation();posReset()">🗑</button><span class="pos-caret">▲</span></span></div>
       <div class="pos-body">
         <div id="posLines"></div>
         <label for="posDisc">Discount (₱)</label><input id="posDisc" type="number" min="0" oninput="posTotals()">
@@ -822,7 +839,7 @@ function posPay(btn){ const items = Object.keys(posCart).map(id => ({id, qty:pos
     show('Sale ' + r.id + ' recorded: ' + peso(r.total) + (r.change ? ' · change ' + peso(r.change) : '') + '. Stock updated.', 'ok'); }, btn); }
 
 /* ----- Cash in / cash out (tabs: Cash in | Cash out | List) ----- */
-let CS = null, cashTab = 'in', clType = 'all', clFrom = '', clTo = '';
+let oDay = '', CS = null, cashTab = 'in', clType = 'all', clFrom = '', clTo = '';
 const svcFee = a => !(a > 0) ? 0 : a < 300 ? 5 : a <= 500 ? 10 : a < 1000 ? 15 : 20 * Math.ceil(a / 1000);
 function loadCash(){ return run(async () => { CS = await api('adminStoreState', S.token); ST.open = CS.open; drawStoreBar();
   if(!clFrom) clFrom = clTo = manila().toISOString().slice(0, 10); drawCash(); if(cashTab === 'list') loadCashList(); }); }
@@ -842,10 +859,13 @@ function drawCashBody(){ const b = $('cashBody');
     <button class="go full" onclick="cashAdd('in', this)">Record cash in</button></div>`;
   else if(cashTab === 'out') b.innerHTML = `<div class="card"><label for="coAmt">Reference amount (₱)</label><input id="coAmt" type="number" min="1" step="1" oninput="feeUpdate('out')">
     <label for="coRef">Reference no. or name (optional)</label><input id="coRef" maxlength="80"><div class="feeline" id="feeLine"></div>
-    <button class="alt full" onclick="cashAdd('out', this)">Add cash out (pending until released)</button></div>`;
+    <button class="alt full" onclick="cashAdd('out', this)">Add cash out</button></div>` + pendingOut();
   else { b.innerHTML = `<div class="card"><div class="three"><div><label for="clType">Type</label><select id="clType" onchange="clType=this.value;loadCashList()"><option value="all">All</option><option value="in">Cash in</option><option value="out">Cash out</option></select></div>
       <div><label for="clFrom">From</label><input id="clFrom" type="date" value="${clFrom}" onchange="clFrom=this.value;loadCashList()"></div>
       <div><label for="clTo">To</label><input id="clTo" type="date" value="${clTo}" onchange="clTo=this.value;loadCashList()"></div></div><div id="clOut" style="margin-top:8px"></div></div>`; $('clType').value = clType; } }
+function pendingOut(){ const pend = CS.entries.filter(e => e.kind === 'out' && e.status === 'Pending'); if(!pend.length) return '';
+  return `<div class="card" style="margin-top:8px"><h3>Pending cash out</h3>` + pend.map(e => `<div class="prow" style="grid-template-columns:1fr auto"><div><b>${peso(e.amount)}</b> <span class="muted">+ fee ${peso(e.fee)}${e.ref ? ' · ' + esc(e.ref) : ''}</span></div>
+    <div class="acts"><button title="Mark released: cash handed over" onclick="cashDo('adminCashRelease',${e.id},this)">✓ Release</button><button class="alt del ib" title="Cancel this cash out" aria-label="Cancel" onclick="cashDo('adminCashCancel',${e.id},this)">✕</button></div></div>`).join('') + '</div>'; }
 function loadCashList(){ return run(async () => drawCashList(await api('adminCashList', S.token, clType, clFrom, clTo))); }
 function drawCashList(rows){ const done = rows.filter(e => e.status === 'Done' || e.status === 'Released'), sum = (k, f) => done.filter(e => e.kind === k).reduce((t, e) => t + e[f], 0);
   const when = e => new Date(e.created).toLocaleString('en-PH', {timeZone:'Asia/Manila', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false});
@@ -853,7 +873,7 @@ function drawCashList(rows){ const done = rows.filter(e => e.status === 'Done' |
     (rows.map(e => `<div class="prow" style="grid-template-columns:1fr auto"><div><b>${e.kind === 'in' ? '＋ Cash in' : '－ Cash out'} ${peso(e.amount)}</b> <span class="muted">+ fee ${peso(e.fee)}</span>
       <span class="badge ${e.status === 'Done' || e.status === 'Released' ? 'Complete' : e.status === 'Pending' ? 'Pending' : 'Incomplete'}">${e.status}</span>
       <div class="muted">${when(e)}${e.kind === 'in' ? ' · ' + (e.method === 'QR' ? 'Scan QR' : 'Cash') : ''}${e.ref ? ' · ' + esc(e.ref) : ''} · ${esc(e.by)}</div></div>
-      <div class="acts">${e.status === 'Pending' && CS.open && e.sessionId === CS.session.id ? `<button onclick="cashDo('adminCashRelease',${e.id},this)">Mark released</button><button class="alt del" onclick="cashDo('adminCashCancel',${e.id},this)">Cancel</button>` : ''}</div></div>`).join('') || '<p class="muted">No entries for this filter.</p>'); }
+      <div class="acts">${e.status === 'Pending' && CS.open && e.sessionId === CS.session.id ? `<button class="ib" title="Mark released" aria-label="Mark released" onclick="cashDo('adminCashRelease',${e.id},this)">✓</button><button class="alt del ib" title="Cancel this cash out" aria-label="Cancel" onclick="cashDo('adminCashCancel',${e.id},this)">✕</button>` : ''}</div></div>`).join('') || '<p class="muted">No entries for this filter.</p>'); }
 function cashAdd(kind, btn){ const amt = parseFloat($(kind === 'in' ? 'ciAmt' : 'coAmt').value);
   run(async () => { await api('adminCashAdd', S.token, kind, kind === 'in' ? $('ciMethod').value : 'Cash', amt, $(kind === 'in' ? 'ciRef' : 'coRef').value); await loadCash();
     show(kind === 'in' ? 'Cash in recorded.' : 'Cash out added. Open the List tab and press Mark released when the cash is handed over.', 'ok'); }, btn); }
