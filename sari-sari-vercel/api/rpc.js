@@ -32,7 +32,10 @@ create table if not exists cash_entries (id serial primary key, session_id int n
   status text not null default 'Done', by_email text not null default '', released_at timestamptz);
 create table if not exists pos_sales (id text primary key, session_id int, created timestamptz not null default now(), by_email text not null,
   items jsonb not null, total numeric not null, cash numeric);
-alter table pos_sales add column if not exists discount numeric not null default 0;`;
+alter table pos_sales add column if not exists discount numeric not null default 0;
+alter table store_sessions add column if not exists pos_start numeric not null default 0;
+alter table store_sessions add column if not exists pos_end numeric;
+alter table cash_entries add column if not exists fee numeric not null default 0;`;
 
 let pool, ready;
 const getPool = () => pool || (pool = new (require('pg').Pool)({
@@ -403,31 +406,44 @@ async function adminPurgeOld(token) {
 }
 
 /* ---------- Open / close the store, cash in/out, POS (owner + cashier) ---------- */
+/* Service charge on every cash in / cash out: 1-299 = 5, 300-500 = 10, 501-999 = 15, then 20 for every 1,000 (or part of it) */
+const serviceFee = a => !(a > 0) ? 0 : a < 300 ? 5 : a <= 500 ? 10 : a < 1000 ? 15 : 20 * Math.ceil(a / 1000);
 async function cashTotals(s) {
   const { rows: e } = await q('select * from cash_entries where session_id=$1 order by id desc', [s.id]);
-  const sum = f => e.filter(f).reduce((t, r) => t + Number(r.amount), 0);
-  const inCash = sum(r => r.kind === 'in' && r.status === 'Done' && r.method === 'Cash'), inQr = sum(r => r.kind === 'in' && r.status === 'Done' && r.method === 'QR');
-  const outReleased = sum(r => r.kind === 'out' && r.status === 'Released'), outPending = sum(r => r.kind === 'out' && r.status === 'Pending');
+  const sum = (f, k = 'amount') => e.filter(f).reduce((t, r) => t + Number(r[k]), 0);
+  const isIn = r => r.kind === 'in' && r.status === 'Done', isOut = r => r.kind === 'out' && r.status === 'Released';
+  const inCash = sum(r => isIn(r) && r.method === 'Cash'), inQr = sum(r => isIn(r) && r.method === 'QR');
+  const outReleased = sum(isOut), outPending = sum(r => r.kind === 'out' && r.status === 'Pending'), fees = sum(r => isIn(r) || isOut(r), 'fee');
   const pos = (await q('select count(*)::int n, coalesce(sum(total),0) t from pos_sales where session_id=$1', [s.id])).rows[0];
-  return { entries: e, totals: { inCash, inQr, inTotal: inCash + inQr, outReleased, outPending, posTotal: Number(pos.t), posCount: pos.n,
-    balance: Number(s.start_amount) + inCash + inQr - outReleased } };
+  return { entries: e, totals: { inCash, inQr, inTotal: inCash + inQr, outReleased, outPending, fees, posTotal: Number(pos.t), posCount: pos.n,
+    balance: Number(s.start_amount) + inCash + inQr + fees - outReleased, posBalance: Number(s.pos_start) + Number(pos.t) } };
 }
+const cashRow = r => ({ id: r.id, sessionId: r.session_id, created: new Date(r.created).toISOString(), kind: r.kind, method: r.method,
+  amount: Number(r.amount), fee: Number(r.fee), ref: r.ref, status: r.status, by: r.by_email });
 async function adminStoreState(token) {
   await auth(token, STORE_ROLES);
   const s = await currentSession();
-  const last = (await q('select end_amount from store_sessions where closed_at is not null order by id desc limit 1')).rows[0];
-  const lastEnd = last ? Number(last.end_amount) : null;
-  if (!s) return { open: false, lastEnd };
+  const last = (await q('select end_amount, pos_end from store_sessions where closed_at is not null order by id desc limit 1')).rows[0];
+  const lastEnd = last ? Number(last.end_amount) : null, lastPosEnd = last && last.pos_end != null ? Number(last.pos_end) : null;
+  if (!s) return { open: false, lastEnd, lastPosEnd };
   const { entries, totals } = await cashTotals(s);
-  return { open: true, lastEnd, session: { id: s.id, openedAt: new Date(s.opened_at).toISOString(), startAmount: Number(s.start_amount) }, totals,
-    entries: entries.map(r => ({ id: r.id, created: new Date(r.created).toISOString(), kind: r.kind, method: r.method, amount: Number(r.amount), ref: r.ref, status: r.status, by: r.by_email })) };
+  return { open: true, lastEnd, lastPosEnd, session: { id: s.id, openedAt: new Date(s.opened_at).toISOString(), startAmount: Number(s.start_amount), posStart: Number(s.pos_start) },
+    totals, entries: entries.map(cashRow) };
 }
-async function adminStoreOpen(token, startAmount) {
+async function adminCashList(token, kind, from, to) {
+  await auth(token, STORE_ROLES);
+  const ok = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+  const f = ok(from) ? new Date(from + 'T00:00:00+08:00') : new Date('2000-01-01T00:00:00Z');
+  const t = ok(to) ? new Date(new Date(to + 'T00:00:00+08:00').getTime() + 86400000) : new Date(Date.now() + 86400000);
+  const { rows } = await q('select * from cash_entries where created >= $1 and created < $2 and ($3::text is null or kind = $3) order by id desc limit 500', [f, t, ['in', 'out'].includes(kind) ? kind : null]);
+  return rows.map(cashRow);
+}
+async function adminStoreOpen(token, startAmount, posStart) {
   const a = await auth(token, STORE_ROLES);
   if (await currentSession()) throw new E('The store is already open.');
-  const amt = Number(startAmount);
-  if (!(amt >= 0) || amt > 10000000) throw new E('Enter the starting money (0 or more).');
-  await q('insert into store_sessions(opened_by,start_amount) values ($1,$2)', [a.email, amt]);
+  const amt = Number(startAmount), pos = Number(posStart);
+  if (!(amt >= 0) || amt > 10000000 || !(pos >= 0) || pos > 10000000) throw new E('Enter both starting amounts (0 or more).');
+  await q('insert into store_sessions(opened_by,start_amount,pos_start) values ($1,$2,$3)', [a.email, amt, pos]);
   return { open: true };
 }
 async function adminStoreClose(token) {
@@ -435,8 +451,8 @@ async function adminStoreClose(token) {
   const s = await currentSession(); if (!s) throw new E('The store is already closed.');
   const { totals } = await cashTotals(s);
   if (totals.outPending > 0) throw new E('There are pending cash-outs. Mark them as released or cancel them before closing.');
-  await q('update store_sessions set closed_at=now(), closed_by=$1, end_amount=$2 where id=$3', [a.email, totals.balance, s.id]);
-  return { endAmount: totals.balance, posTotal: totals.posTotal };
+  await q('update store_sessions set closed_at=now(), closed_by=$1, end_amount=$2, pos_end=$3 where id=$4', [a.email, totals.balance, totals.posBalance, s.id]);
+  return { endAmount: totals.balance, posEnd: totals.posBalance, posTotal: totals.posTotal };
 }
 async function adminCashAdd(token, kind, method, amount, ref) {
   const a = await auth(token, STORE_ROLES);
@@ -445,8 +461,8 @@ async function adminCashAdd(token, kind, method, amount, ref) {
   if (!['in', 'out'].includes(kind)) throw new E('Choose cash in or cash out.');
   if (!(amt > 0) || amt > 1000000) throw new E('Enter an amount greater than 0.');
   const m = kind === 'in' ? (method === 'QR' ? 'QR' : 'Cash') : 'Cash';
-  await q('insert into cash_entries(session_id,kind,method,amount,ref,status,by_email) values ($1,$2,$3,$4,$5,$6,$7)',
-    [s.id, kind, m, amt, String(ref || '').slice(0, 80), kind === 'in' ? 'Done' : 'Pending', a.email]);
+  await q('insert into cash_entries(session_id,kind,method,amount,fee,ref,status,by_email) values ($1,$2,$3,$4,$5,$6,$7,$8)',
+    [s.id, kind, m, amt, serviceFee(amt), String(ref || '').slice(0, 80), kind === 'in' ? 'Done' : 'Pending', a.email]);
   return true;
 }
 async function adminCashRelease(token, id) {
@@ -493,7 +509,7 @@ const fns = { getInfo, getProducts, getRiders, placeOrder, trackOrder, trackMany
   adminGetOrders, adminPoll, adminReviewOrder, adminAssignRider, adminGetProducts, adminSaveProduct, adminDeleteProduct,
   adminListStaff, adminSaveStaff, adminDeleteStaff, riderOrders, riderPoll, riderRespond,
   adminTestEmail, adminReport, adminStorage, adminPurgeOld,
-  adminStoreState, adminStoreOpen, adminStoreClose, adminCashAdd, adminCashRelease, adminCashCancel, posSale };
+  adminStoreState, adminCashList, adminStoreOpen, adminStoreClose, adminCashAdd, adminCashRelease, adminCashCancel, posSale };
 
 module.exports = async (req, res) => {
   try {
