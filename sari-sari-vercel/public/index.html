@@ -123,6 +123,24 @@ main.wide{max-width:1400px}
 .irow{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;gap:6px}
 .itile .acts{margin-top:auto;padding-top:6px;display:flex;gap:6px}.itile .acts button{flex:1}
 @media(max-width:560px){.inv-grid{grid-template-columns:1fr 1fr}}
+#toasts{position:fixed;top:calc(var(--hh,0px) + 8px);left:10px;right:10px;max-width:520px;margin:0 auto;z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{pointer-events:auto;display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:12px;color:#fff;font-weight:600;font-size:.88rem;box-shadow:0 6px 18px #0004;cursor:pointer;animation:tin .2s ease-out}
+.toast.ok{background:var(--leaf)}.toast.err{background:var(--chili)}.toast.info{background:var(--blue)}.toast .ti{flex:none}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.spin{display:inline-block;width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-wrap{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;padding:30px 10px;color:#55657f;font-size:.85rem}
+#busy{position:fixed;top:0;left:0;right:0;height:3px;z-index:70;background:linear-gradient(90deg,transparent,var(--mango),transparent) no-repeat;background-size:40% 100%;animation:busybar 1s linear infinite}
+@keyframes busybar{from{background-position:-40% 0}to{background-position:140% 0}}
+button.busy-btn{position:relative;opacity:.75}
+button.busy-btn::after{content:'';position:absolute;right:8px;top:50%;width:12px;height:12px;margin-top:-6px;border:2px solid #fff6;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+button.alt.busy-btn::after{border-color:#1d4e9e33;border-top-color:var(--blue)}
+.Awaiting{background:#b36b00}.Cancelled{background:#6b7280}
+.alert-box{background:#fff4dd;border:2px solid var(--mango);border-radius:10px;padding:10px;margin:8px 0}
+.segs.scroll{overflow-x:auto}.segs.scroll button{flex:none;white-space:nowrap;padding:7px 10px}
+.scmode{position:absolute;left:10px;bottom:10px;background:#000a;color:#fff;border:0;border-radius:99px;padding:6px 12px;font-size:.75rem;line-height:1.1}
+.scman{display:flex;gap:6px;padding:8px 10px;background:#111}.scman input{background:#222;color:#fff;border:0}
+#posLink{order:3}
 .hide{display:none!important}.hide{display:none!important}
 /* fixed bottom navigation */
 .bn{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;background:#fff;border-top:4px solid var(--mango);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -3px 12px #0003}
@@ -211,7 +229,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
     </div>
     <div class="shopwrap">
       <aside id="side" class="card collapsed" aria-label="Categories"></aside>
-      <div class="shopmain"><div class="grid" id="products"><p class="muted">Loading products…</p></div>
+      <div class="shopmain"><div class="grid" id="products"><div class="spin-wrap"><span class="spin"></span>Loading products…</div></div>
         <p class="hide" id="more" style="text-align:center"><button class="alt" onclick="lim+=40;drawShop()">Show more</button></p></div>
     </div>
   </div>
@@ -304,7 +322,8 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <button data-v="aOrders" onclick="view('aOrders')"><b>📋</b><span id="ordLbl">Orders</span></button>
   <button data-v="aProducts" onclick="view('aProducts')"><b>🏷️</b><span>Inventory</span></button>
 </nav>
-<div id="toast" class="hide" role="status" onclick="toastGo()"></div>
+<div id="toasts" aria-live="polite"></div>
+<div id="busy" class="hide"></div>
 
 <dialog id="pd" aria-labelledby="pdTitle">
   <h2 id="pdTitle">Product</h2>
@@ -358,8 +377,10 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
       <button class="ib hide" id="scZi" title="Zoom in" aria-label="Zoom in" onclick="scZoom(1)">＋</button>
       <button class="ib hide" id="scZo" title="Zoom out" aria-label="Zoom out" onclick="scZoom(-1)">−</button>
     </div>
+    <button class="scmode" id="scMode" title="Switch scanner type" onclick="scSwitch()">⇄ Scanner</button>
   </div>
   <p id="scMsg"></p>
+  <div class="scman"><input id="scMan" inputmode="numeric" autocomplete="off" placeholder="Or type the barcode" onkeydown="if(event.key==='Enter')scManual()"><button onclick="scManual()">Add</button></div>
 </dialog>
 <script>
 let S = null, products = [], cart = {}, cat = 'All', q = '', lim = 40, tm, cur = 'shop', sideOpen = innerWidth > 700, unseen = 0;
@@ -369,7 +390,7 @@ let ADDR = '743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan', STORE = 'Jer
 const peso = n => '₱' + Number(n).toLocaleString('en-PH');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const api = async (fn, ...a) => {
+const apiCall = async (fn, ...a) => {
   const post = () => fetch('/api/rpc', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fn, args:a})});
   let r, j;
   try { r = fn === 'getProducts' ? await fetch('/api/rpc?fn=getProducts') : await post(); }
@@ -382,6 +403,10 @@ const api = async (fn, ...a) => {
     'Server error (HTTP ' + r.status + '). Open your-site/api/rpc to see what is wrong.');
   if(!j || j.result === undefined) throw new Error('The server sent an unexpected reply. Make sure api/rpc.js is the latest version and redeploy.');
   return j.result; };
+const QUIET = new Set(['adminPoll', 'riderPoll', 'getInfo']); let pendingCalls = 0;
+const api = async (fn, ...a) => { const quiet = QUIET.has(fn) || (fn === 'trackMany' && a[1] === true);
+  if(!quiet){ pendingCalls++; $('busy').classList.remove('hide'); }
+  try { return await apiCall(fn, ...a); } finally { if(!quiet && --pendingCalls <= 0){ pendingCalls = 0; $('busy').classList.add('hide'); } } };
 const fmt = d => new Date(d).toLocaleString('en-PH', {dateStyle:'medium', timeStyle:'short'});
 const store = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
 const load = k => { try { return JSON.parse(sessionStorage.getItem(k)); } catch(e){ return null; } };
@@ -389,13 +414,19 @@ const lstore = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } c
 const lload = k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } };
 const pickup = () => 'Pick up at: ' + STORE + ' ' + ADDR;
 
-function show(text, type){ $('msg').innerHTML = text ? `<div class="msg ${type||'err'}" role="alert">${esc(text)}</div>` : ''; if(text) window.scrollTo(0,0); }
-async function run(fn, btn){ if(btn) btn.disabled = true; show('');
+function popup(text, type, o){ o = o || {}; const box = $('toasts'), el = document.createElement('div');
+  el.className = 'toast ' + (type || 'info'); el.setAttribute('role', type === 'err' ? 'alert' : 'status');
+  el.innerHTML = '<span class="ti">' + ({ok:'✓', err:'⚠', info:'🔔'}[type || 'info']) + '</span><span></span>'; el.lastChild.textContent = text;
+  el.onclick = () => { el.remove(); if(o.go) o.go(); };
+  while(box.children.length >= 4) box.firstChild.remove(); box.appendChild(el);
+  if(o.sound) beep(); setTimeout(() => el.remove(), o.ms || (type === 'err' ? 6500 : 4200)); }
+function show(text, type){ if(text) popup(text, type === 'ok' ? 'ok' : 'err'); }
+function toast(text){ popup(text, 'info', {sound:true, go:toastGo, ms:12000}); }
+function toastGo(){ view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 'track'); }
+async function run(fn, btn){ if(btn){ btn.disabled = true; btn.classList.add('busy-btn'); }
   try { return await fn(); } catch(e){ const m = e.message || String(e);
     if(S && /sign in again|session expired/i.test(m)){ store('sariA', null); location.reload(); return; } show(m); }
-  finally { if(btn) btn.disabled = false; } }
-function toast(t){ $('toast').textContent = '🔔 ' + t; $('toast').classList.remove('hide'); beep(); if(!S) setTimeout(() => $('toast').classList.add('hide'), 15000); }
-function toastGo(){ $('toast').classList.add('hide'); view(S ? (S.role==='delivery' ? 'rDeliveries' : 'aOrders') : 'track'); }
+  finally { if(btn){ btn.disabled = false; btn.classList.remove('busy-btn'); } } }
 function beep(){ try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
   [880, 1175].forEach((f, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + i*.25;
     o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination); g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t+.4); o.start(t); o.stop(t+.4); }); } catch(e){} }
@@ -514,18 +545,18 @@ function checkout(){
 const myOrders = () => (lload('sariOrders') || []).filter(o => Date.now() - o.t < 30*864e5);
 function saveOrder(id, contact, status, t, ds){ const l = myOrders().filter(o => o.id!==id); l.unshift({id, contact, status, t, ds:ds || ''}); lstore('sariOrders', l.slice(0, 40)); }
 function syncStatus(o, notify){ const l = lload('sariOrders') || [], m = l.find(x => x.id===o.id); if(!m) return; const msgs = [];
-  if(m.status !== o.status){ msgs.push(o.status==='Complete' ? `Your order ${o.id} is complete! ✅` : `Your order ${o.id} has missing items. Tap to see details.`); m.status = o.status; }
+  if(m.status !== o.status){ const t = {Complete:`Your order ${o.id} is complete! ✅`, Awaiting:`Some items in your order ${o.id} are missing. Tap to proceed or cancel.`, Incomplete:`Your order ${o.id} will continue without the missing items.`, Cancelled:`Your order ${o.id} was cancelled.`}[o.status]; if(t) msgs.push(t); m.status = o.status; }
   const ds = o.deliveryStatus || ''; if((m.ds || '') !== ds){ const nm = o.rider ? o.rider.name : 'Your rider';
     const t = {Accepted:`${nm} accepted your delivery 🛵`, Declined:`${nm} can't take your delivery. The store will assign another rider.`, Delivered:`Your order ${o.id} was delivered ✅`}[ds]; if(t) msgs.push(t); m.ds = ds; }
   lstore('sariOrders', l); if(notify && msgs.length){ unseen += msgs.length; badge(); toast(msgs[msgs.length-1]); } }
 function badge(){ $('trkLbl').textContent = 'Track order' + (unseen ? ` (${unseen})` : ''); }
-async function custPoll(){ if(S) return; const p = myOrders().filter(o => o.status==='Pending' || o.ds==='Requested' || o.ds==='Accepted'); if(!p.length) return;
-  try { (await api('trackMany', p.map(({id, contact}) => ({id, contact})))).forEach(o => syncStatus(o, true)); } catch(e){} }
+async function custPoll(){ if(S) return; const p = myOrders().filter(o => o.status==='Pending' || o.status==='Awaiting' || o.ds==='Requested' || o.ds==='Accepted'); if(!p.length) return;
+  try { (await api('trackMany', p.map(({id, contact}) => ({id, contact})), true)).forEach(o => syncStatus(o, true)); } catch(e){} }
 async function openTrack(){ unseen = 0; badge(); const l = myOrders();
   if(!l.length){ $('hist').innerHTML = '<p class="muted">No orders yet from this device. Use "Find an order" below if you ordered elsewhere.</p>'; $('histSum').textContent = ''; return; }
   try { const r = await api('trackMany', l.map(({id, contact}) => ({id, contact}))); r.forEach(o => syncStatus(o, false));
     const c = s => r.filter(o => o.status===s).length;
-    $('histSum').textContent = `${r.length} orders · ${c('Pending')} pending · ${c('Complete')} complete · ${c('Incomplete')} incomplete`;
+    $('histSum').textContent = `${r.length} orders · ${c('Pending') + c('Awaiting')} pending · ${c('Complete')} complete · ${c('Incomplete')} incomplete`;
     $('hist').innerHTML = r.map(o => orderHtml(o, false)).join('') || '<p class="muted">No orders in the last 30 days.</p>';
   } catch(e){ show(e.message || String(e)); } }
 function doTrack(){
@@ -547,20 +578,33 @@ function assignHtml(o){
   if(o.method !== 'Delivery' || (o.rider && o.deliveryStatus !== 'Declined')) return '';
   const opts = riders.map(r => `<option value="${r.id}">${esc(r.name)} ${r.online ? '(online)' : '(offline)'}</option>`).join('');
   return riders.length ? `<p class="row" style="justify-content:flex-start"><select id="rs_${o.id}" style="max-width:260px">${opts}</select><button class="alt" onclick="assignRider('${o.id}', this)">Assign</button></p>` : '<div class="muted">No riders set up yet (Staff tab).</div>'; }
+const stLabel = (st, admin) => st === 'Awaiting' ? (admin ? 'Waiting for customer' : 'Needs your OK') : st;
+const adjusted = o => o.total - o.missing.reduce((t, m) => t + m.price * m.qty, 0);
+function awaitHtml(o, admin){ if(o.status !== 'Awaiting') return '';
+  return admin ? `<div class="alert-box"><b>⏳ Waiting for the customer</b><div class="muted">Some items are missing. New total if they continue: ${peso(adjusted(o))}. If they answered by phone, record it here.</div>
+      <div class="row" style="justify-content:flex-start;gap:8px;margin-top:6px"><button class="ib" title="Customer agreed to continue" onclick="resolveOrder('${o.id}','proceed',this)">✓ Agreed</button><button class="alt del ib" title="Customer cancelled the order" aria-label="Customer cancelled" onclick="resolveOrder('${o.id}','cancel',this)">✕ Cancelled</button></div></div>`
+    : `<div class="alert-box"><b>Some items are missing.</b><div class="muted">New total if you continue: <b>${peso(adjusted(o))}</b> (was ${peso(o.total)}).</div>
+      <div class="row" style="justify-content:flex-start;gap:8px;margin-top:8px"><button class="go" onclick="respondOrder('${o.id}','${esc(o.contact)}','proceed',this)">✓ Proceed with the rest</button><button class="alt del" onclick="respondOrder('${o.id}','${esc(o.contact)}','cancel',this)">✕ Cancel order</button></div></div>`; }
+function respondOrder(id, contact, action, btn){ if(action === 'cancel' && !confirm('Cancel this whole order?')) return;
+  run(async () => { await api('orderRespond', id, contact, action); $('tOut').innerHTML = ''; await openTrack();
+    show(action === 'proceed' ? 'Thank you! We will prepare the rest of your order.' : 'Your order was cancelled.', 'ok'); }, btn); }
+function resolveOrder(id, action, btn){ if(!confirm(action === 'proceed' ? 'Customer agreed to continue without the missing items?' : 'Customer chose to cancel this order? Items will go back to stock.')) return;
+  run(async () => { await api('adminResolveOrder', S.token, id, action); knownAw = null; await loadAdminOrders(); poll();
+    show(action === 'proceed' ? 'The order will continue without the missing items.' : 'Order cancelled and stock restored.', 'ok'); }, btn); }
 function orderHtml(o, admin){
   const miss = o.missing.map(m => m.id);
   return `<div class="card order" id="o_${o.id}">
-    <div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.status}">${o.status}</span></div>
+    <div class="row"><h3>${esc(o.id)}</h3><span class="badge ${o.status}">${stLabel(o.status, admin)}</span></div>
     <div class="muted">${fmt(o.created)} · ${esc(o.method)}${admin ? ' · '+esc(o.name)+' · <a href="tel:'+esc(o.contact)+'">'+esc(o.contact)+'</a>'+(o.email?' · '+esc(o.email):'') : ''}</div>
     <div class="muted">${o.method==='Delivery' ? 'Deliver to: '+esc(o.address) : esc(pickup())}</div>
-    ${riderBlock(o, admin)}${admin ? assignHtml(o) : ''}
+    ${awaitHtml(o, admin)}${riderBlock(o, admin)}${admin ? assignHtml(o) : ''}
     ${o.note ? `<div class="muted">Customer note: ${esc(o.note)}</div>` : ''}
     <ul>${o.items.map(i => `<li>${admin && o.status==='Pending'
         ? `<label><input type="checkbox" value="${i.id}"> ${i.qty} × ${esc(i.name)} <span class="muted">(tick if missing)</span></label>`
         : `<span class="${miss.includes(i.id)?'miss':''}">${i.qty} × ${esc(i.name)}${miss.includes(i.id)?' (missing)':''}</span>`}
         <span>${peso(i.qty*i.price)}</span></li>`).join('')}</ul>
     <div class="row"><b>Total ${peso(o.total)}</b>
-      ${o.status==='Incomplete' ? `<span class="miss">Adjusted: ${peso(o.total - o.missing.reduce((s,m)=>s+m.price*m.qty,0))}</span>` : ''}</div>
+      ${(o.status==='Incomplete' || o.status==='Awaiting') ? `<span class="miss">Adjusted: ${peso(o.total - o.missing.reduce((s,m)=>s+m.price*m.qty,0))}</span>` : ''}</div>
     ${o.adminNote ? `<div class="muted">Store note: ${esc(o.adminNote)}</div>` : ''}
     ${admin && o.status==='Pending' ? `<label for="n_${o.id}">Note to customer (optional)</label><input id="n_${o.id}">
       <p><button class="go" onclick="review('${o.id}', this)">Confirm order</button>
@@ -588,8 +632,9 @@ function startAdmin(){ $('bnC').classList.add('hide'); $('bnA').classList.remove
   poll(); pollT = setInterval(poll, 20000); }
 async function poll(){ /* also keeps this person marked online */
   if(S.role !== 'delivery') refreshStore();
-  try { const rider = S.role==='delivery', l = await api(rider ? 'riderPoll' : 'adminPoll', S.token), ids = l.map(o => o.id);
+  try { const rider = S.role==='delivery', all = await api(rider ? 'riderPoll' : 'adminPoll', S.token), l = rider ? all : all.filter(o => o.status === 'Pending'), ids = l.map(o => o.id), aw = rider ? [] : all.filter(o => o.status === 'Awaiting').map(o => o.id);
     const fresh = known ? l.filter(o => !known.includes(o.id)) : []; known = ids;
+    if(knownAw){ const gone = knownAw.filter(id => !aw.includes(id)); if(gone.length){ toast('A customer replied about the missing items in ' + gone[0] + '.'); if(cur === 'aOrders') loadAdminOrders(); } } knownAw = aw;
     $('ordLbl').textContent = rider ? (ids.length ? `Deliveries (${ids.length} new)` : 'Deliveries') : (ids.length ? `Orders (${ids.length} pending)` : 'Orders');
     if(fresh.length){ const o = fresh[0];
       const t = fresh.length>1 ? fresh.length + (rider ? ' new delivery requests!' : ' new orders!') : (rider ? `Delivery request from ${o.name} · ${peso(o.total)}` : `New order from ${o.name} · ${peso(o.total)} · ${o.method}`);
@@ -603,7 +648,7 @@ const digits = s => String(s).replace(/\D/g, ''), idk = s => String(s).toUpperCa
 function loadAdminOrders(){
   if(!$('oList')) $('aOrders').innerHTML = `<div class="row" style="justify-content:flex-start;flex-wrap:nowrap;gap:6px"><div class="sw" style="max-width:520px;min-width:90px"><input id="oSearch" type="search" placeholder="Search name, mobile number or order number" aria-label="Search orders" oninput="oq=this.value;$('oSx').classList.toggle('hide',!oq);drawOrders()">
     <button class="x hide" id="oSx" aria-label="Clear search" onclick="oq='';$('oSearch').value='';this.classList.add('hide');drawOrders()">×</button></div><input id="oDay" type="date" title="Show orders for this day" aria-label="Day" style="width:auto;flex:none" onchange="oDay=this.value;loadAdminOrders()"><button class="alt ib" title="Clear and refresh (today)" aria-label="Clear and refresh" onclick="resetOrders()">↻</button></div>
-    <div class="segs" id="oTabs"></div><p class="muted" id="oInfo"></p><div id="oList"></div>`;
+    <div class="segs scroll" id="oTabs"></div><p class="muted" id="oInfo"></p><div id="oList"><div class="spin-wrap"><span class="spin"></span>Loading orders…</div></div>`;
   if($('oDay')) $('oDay').value = oDay || manila().toISOString().slice(0, 10);
   return run(async () => { [aData, riders] = await Promise.all([api('adminGetOrders', S.token, oDay), api('getRiders')]); drawOrders(); }); }
 function assignRider(id, btn){ run(async () => { await api('adminAssignRider', S.token, id, $('rs_' + id).value); await loadAdminOrders(); show('Rider assigned. They will see the request.', 'ok'); }, btn); }
@@ -613,23 +658,23 @@ function drawOrders(){
   const t = norm(oq).trim(), d = digits(oq), k = idk(oq);
   const hit = o => norm(o.name).includes(t) || (d && digits(o.contact).includes(d)) || (k && idk(o.id).includes(k));
   const c = s => aData.filter(o => o.status===s).length;
-  $('oTabs').innerHTML = ['Pending','Complete','Incomplete','All'].map(s =>
-    `<button class="${!t && s===aFilter?'on':''}" onclick="aFilter='${s}';oq='';$('oSearch').value='';$('oSx').classList.add('hide');drawOrders()">${s} (${s==='All'?aData.length:c(s)})</button>`).join('');
+  $('oTabs').innerHTML = ['Pending','Awaiting','Complete','Incomplete','Cancelled','All'].map(s =>
+    `<button class="${!t && s===aFilter?'on':''}" onclick="aFilter='${s}';oq='';$('oSearch').value='';$('oSx').classList.add('hide');drawOrders()">${s==='Awaiting'?'Waiting':s} (${s==='All'?aData.length:c(s)})</button>`).join('');
   const f = t ? aData.filter(hit) : (aFilter==='All' ? aData : aData.filter(o => o.status===aFilter));
   $('oInfo').textContent = t ? `${f.length} match${f.length===1?'':'es'} for "${oq}" on this day (unconfirmed orders from other days are always shown)` : (oDay && oDay !== manila().toISOString().slice(0, 10) ? 'Orders for ' + oDay : 'Today') + ' · unconfirmed orders from other days are always shown · older orders are in Reports';
   $('oList').innerHTML = f.map(o => orderHtml(o, true)).join('') || '<p>No orders here.</p>'; }
 function review(id, btn){
   const missing = [...document.querySelectorAll('#o_'+id+' input[type=checkbox]:checked')].map(c => c.value);
   const note = $('n_'+id).value;
-  if(missing.length && !confirm('Mark this order as incomplete with ' + missing.length + ' missing item(s)?')) return;
+  if(missing.length && !confirm('Ask the customer to confirm the order without ' + missing.length + ' missing item(s)? They can proceed or cancel.')) return;
   run(async () => { const r = await api('adminReviewOrder', S.token, id, missing, note);
-    show(id + ' marked ' + r.status + '. ' + (r.emailed ? 'Customer was emailed. ' : '') + 'They will see it in Track order.', 'ok'); loadAdminOrders(); poll(); }, btn); }
+    show(r.status === 'Awaiting' ? id + ': the customer was asked to proceed or cancel. ' + (r.emailed ? 'They were emailed.' : '') : id + ' marked ' + r.status + '. ' + (r.emailed ? 'Customer was emailed. ' : '') + 'They will see it in Track order.', 'ok'); loadAdminOrders(); poll(); }, btn); }
 
 /* ----- Admin inventory (CRUD) ----- */
 const cats = () => [...new Set(adm.map(p => p.category).filter(Boolean))].sort();
 function loadAdminProducts(){
   $('aProducts').innerHTML = `<div class="row inv-top" style="flex-wrap:nowrap;gap:6px"><div class="sw"><input id="aSearch" type="search" placeholder="Search inventory" aria-label="Search inventory" oninput="aq=this.value;$('aSx').classList.toggle('hide',!aq);drawAdm()"><button class="x hide" id="aSx" aria-label="Clear search" onclick="aq='';$('aSearch').value='';this.classList.add('hide');drawAdm()">×</button></div>
-    <button class="alt ib" title="Clear and refresh" aria-label="Clear and refresh" onclick="resetInv()">↻</button> <button class="go ib" title="Add product" aria-label="Add product" onclick="editProd()">＋</button></div><div id="admList"></div>`;
+    <button class="alt ib" title="Clear and refresh" aria-label="Clear and refresh" onclick="resetInv()">↻</button> <button class="go ib" title="Add product" aria-label="Add product" onclick="editProd()">＋</button></div><div id="admList"><div class="spin-wrap"><span class="spin"></span>Loading products…</div></div>`;
   return run(async () => { adm = await api('adminGetProducts', S.token); drawAdm(); }); }
 function drawAdm(){
   const terms = norm(aq).split(/\s+/).filter(Boolean);
@@ -724,7 +769,7 @@ function reportRows(kind, list){
   if(kind==='orders') return [['Order ID','Date (PH time)','Customer','Mobile','Email','Method','Address','Items','Missing items','Total','Adjusted total','Status','Rider','Delivery status','Store note','Customer note']]
     .concat(list.map(o => [o.id, when(o), o.name, asText(o.contact), o.email, o.method, o.address, o.items.map(i => i.qty + ' x ' + i.name).join('; '),
       o.missing.map(i => i.qty + ' x ' + i.name).join('; '), o.total, netOf(o), o.status, o.rider ? o.rider.name : '', o.deliveryStatus, o.adminNote, o.note]));
-  const done = list.filter(o => o.status !== 'Pending');
+  const done = list.filter(o => o.status === 'Complete' || o.status === 'Incomplete');
   if(kind==='items'){ const m = {}; done.forEach(o => { const miss = o.missing.map(x => x.id); o.items.filter(i => !miss.includes(i.id)).forEach(i => { const e = m[i.name] || (m[i.name] = {q:0, v:0}); e.q += i.qty; e.v += i.qty*i.price; }); });
     return [['Product','Quantity sold','Sales (PHP)']].concat(Object.keys(m).sort((a, b) => m[b].v - m[a].v).map(n => [n, m[n].q, m[n].v])); }
   const d = {}; done.forEach(o => { const e = d[dayOf(o)] || (d[dayOf(o)] = {n:0, v:0}); e.n++; e.v += netOf(o); });
@@ -749,7 +794,7 @@ const cashRows = list => { const done = list.filter(e => e.status === 'Done' || 
 function dl(kind, btn){ run(async () => { const f = $('rFrom').value, t = $('rTo').value;
     if(kind === 'cash'){ const rows = await api('adminCashList', S.token, 'all', f, t); downloadCsv(`cash_${f}_to_${t}.csv`, cashRows(rows));
       const done = rows.filter(e => e.status === 'Done' || e.status === 'Released'); $('rSum').textContent = `${rows.length} cash entries · service charges ${peso(done.reduce((s, e) => s + e.fee, 0))}`; return; }
-    const list = await api('adminReport', S.token, f, t), rows = reportRows(kind, list), done = list.filter(o => o.status !== 'Pending');
+    const list = await api('adminReport', S.token, f, t), rows = reportRows(kind, list), done = list.filter(o => o.status === 'Complete' || o.status === 'Incomplete');
     downloadCsv(`${kind}_${f}_to_${t}.csv`, rows);
     $('rSum').textContent = `${list.length} orders in this period · ${done.length} confirmed · sales ${peso(done.reduce((s, o) => s + netOf(o), 0))}`; }, btn); }
 function dlOld(btn){ run(async () => { const c = new Date(manila().getTime() - 60*864e5).toISOString().slice(0, 10), list = await api('adminReport', S.token, '2000-01-01', c);
@@ -785,50 +830,74 @@ async function openStore(){ $('odBtn').disabled = true;
 function closeStore(btn){ if(!confirm('Close the store?\n\nCustomers will not be able to place orders until you open it again.')) return;
   run(async () => { const r = await api('adminStoreClose', S.token); ST.open = false; drawStoreBar(); if(cur==='aCash' || cur==='aPos') view(cur); show('Store closed. Cash in/out: ' + peso(r.endAmount) + ' · POS: ' + peso(r.posEnd) + '.', 'ok'); }, btn); }
 
-/* ----- Barcode scanner: HD camera, continuous focus, torch, zoom, checksum check ----- */
-let scTrack = null, scTorchOn = false, scZoomV = 1;
-const SC_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf'];
-const eanOk = c => { if(!/^\d+$/.test(c) || ![8, 12, 13].includes(c.length)) return true; const d = c.split('').map(Number), chk = d.pop(); let t = 0; d.reverse().forEach((n, i) => t += n * (i % 2 ? 1 : 3)); return (10 - t % 10) % 10 === chk; };
-function loadZx(){ return window.ZXing ? Promise.resolve() : new Promise((ok, no) => { const t = document.createElement('script');
-  t.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; t.onload = ok; t.onerror = no; document.head.appendChild(t); }); }
-function scHit(raw){ const code = String(raw || '').trim(); if(!code || !eanOk(code)) return; const now = Date.now(); if(code === scLast && now - scLastT < 1200) return; scLast = code; scLastT = now;
-  beep(); try { if(navigator.vibrate) navigator.vibrate(60); } catch(e){}
+/* ----- Barcode scanner: phone scanner or software scanner, auto-fallback, torch/zoom, typed code ----- */
+let scTrack = null, scTorchOn = false, scZoomV = 1, scEngine = 'native', scAuto = true;
+const SC_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code'];
+const CAM_VIDEO = {facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}};
+function loadZx(){ if(window.ZXing) return Promise.resolve();
+  const urls = ['https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js', 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js'];
+  const go = i => new Promise((ok, no) => { const t = document.createElement('script'); t.src = urls[i]; t.onload = ok;
+    t.onerror = () => { t.remove(); if(i + 1 < urls.length) go(i + 1).then(ok, no); else no(new Error('load')); }; document.head.appendChild(t); });
+  return go(0); }
+function scAccept(code){ beep(); try { if(navigator.vibrate) navigator.vibrate(60); } catch(e){}
   const f = $('scFrame'); f.classList.add('ok'); setTimeout(() => f.classList.remove('ok'), 350);
   const msg = scCb ? scCb(code) : ''; $('scMsg').textContent = msg || ('Scanned ' + code); if(scOnce) setTimeout(closeScan, 500); }
-function scSetup(){ const t = scTrack; if(!t || !t.getCapabilities) return; const c = t.getCapabilities() || {};
+function scHit(raw){ const code = String(raw || '').trim(); if(!code) return; const now = Date.now(); if(code === scLast && now - scLastT < 1200) return; scLast = code; scLastT = now; scAccept(code); }
+function scManual(){ const v = $('scMan').value.trim(); if(!v) return; $('scMan').value = ''; scAccept(v); }
+function scSetup(){ const t = scTrack; if(!t || !t.getCapabilities) return; let c = {}; try { c = t.getCapabilities() || {}; } catch(e){}
   $('scTorch').classList.toggle('hide', !c.torch); $('scZi').classList.toggle('hide', !c.zoom); $('scZo').classList.toggle('hide', !c.zoom);
-  $('scTools').classList.toggle('hide', !c.torch && !c.zoom);
-  const adv = []; if(c.focusMode && c.focusMode.includes('continuous')) adv.push({focusMode:'continuous'});
-  if(c.zoom){ scZoomV = Math.min(c.zoom.max, Math.max(c.zoom.min, 1.5)); adv.push({zoom:scZoomV}); }
-  if(adv.length) t.applyConstraints({advanced:adv}).catch(() => {}); }
+  $('scTools').classList.toggle('hide', !c.torch && !c.zoom); if(c.zoom) scZoomV = c.zoom.min || 1;
+  if(c.focusMode && c.focusMode.includes('continuous')) t.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(() => {}); }
 function scZoom(d){ const t = scTrack; if(!t) return; const c = t.getCapabilities(), step = c.zoom.step || (c.zoom.max - c.zoom.min) / 8;
   scZoomV = Math.min(c.zoom.max, Math.max(c.zoom.min, scZoomV + d * step * 2)); t.applyConstraints({advanced:[{zoom:scZoomV}]}).catch(() => {}); }
 function scTorchToggle(){ if(!scTrack) return; scTorchOn = !scTorchOn; $('scTorch').style.opacity = scTorchOn ? 1 : .6;
   scTrack.applyConstraints({advanced:[{torch:scTorchOn}]}).catch(() => { scTorchOn = false; $('scTorch').style.opacity = .6; }); }
 function scFocus(){ const t = scTrack; if(!t || !t.getCapabilities) return; const c = t.getCapabilities(); if(!(c.focusMode && c.focusMode.includes('single-shot'))) return;
   t.applyConstraints({advanced:[{focusMode:'single-shot'}]}).then(() => setTimeout(() => { if(scTrack && c.focusMode.includes('continuous')) scTrack.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(() => {}); }, 1200)).catch(() => {}); }
-async function openScan(cb, once){ scCb = cb; scOnce = !!once; scLast = ''; scTorchOn = false; $('scMsg').textContent = 'Starting camera…'; $('scTools').classList.add('hide'); $('sc').showModal();
+function scErr(e){ const n = (e && e.name) || '';
+  if(e && e.message === 'load') return 'Could not load the software scanner. It needs an internet connection. You can type the barcode below.';
+  if(/NotAllowed|Permission/.test(n)) return 'Camera permission is blocked. Allow the camera for this site in your browser settings, then try again.';
+  if(/NotFound/.test(n)) return 'No camera was found on this device.';
+  if(/NotReadable|TrackStart|Abort/.test(n)) return 'The camera is busy. Close other apps that use it and try again.';
+  if(/Security/.test(n) || !window.isSecureContext) return 'The camera needs a secure (https) page.';
+  return 'Camera problem: ' + (n || (e && e.message) || 'unknown') + '. You can type the barcode below.'; }
+async function nativeFormats(){ if(!('BarcodeDetector' in window)) return null;
+  try { const sup = await BarcodeDetector.getSupportedFormats(), f = SC_FORMATS.filter(x => sup.includes(x)); return f.length ? f : null; } catch(e){ return null; } }
+function scCleanup(){ if(scStop){ try { scStop(); } catch(e){} scStop = null; } const v = $('scVideo');
+  try { if(scTorchOn && scTrack) scTrack.applyConstraints({advanced:[{torch:false}]}); } catch(e){}
+  try { if(v.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); } catch(e){} v.srcObject = null; scTrack = null; scTorchOn = false; $('scTools').classList.add('hide'); }
+async function startScan(engine){ scCleanup(); const v = $('scVideo'); scEngine = engine;
+  $('scMode').textContent = '⇄ ' + (engine === 'native' ? 'Phone scanner' : 'Software scanner'); $('scMsg').textContent = 'Starting camera…';
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30}}, audio:false}), v = $('scVideo');
-    scTrack = stream.getVideoTracks()[0]; v.srcObject = stream; await v.play().catch(() => {}); scSetup();
-    let stopLoop = () => {}, fm = null;
-    if('BarcodeDetector' in window){ try { const sup = await BarcodeDetector.getSupportedFormats(); const ok = SC_FORMATS.filter(x => sup.includes(x)); if(ok.length) fm = ok; } catch(e){} }
-    if(fm){ const det = new BarcodeDetector({formats:fm}); let on = true, busy = false; stopLoop = () => { on = false; };
-      const tick = async () => { if(!on) return; if(!busy && v.readyState >= 2){ busy = true; try { const r = await det.detect(v); if(r.length) scHit(r[0].rawValue); } catch(e){} busy = false; } setTimeout(tick, 60); }; tick(); }
-    else { try { await loadZx(); } catch(e){ stream.getTracks().forEach(t => t.stop()); v.srcObject = null; scTrack = null; $('scMsg').textContent = 'Could not load the scanner. Check your internet connection and try again.'; return; }
-      const h = new Map(); h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.ITF]);
-      h.set(ZXing.DecodeHintType.TRY_HARDER, true); const zr = new ZXing.BrowserMultiFormatReader(h, 60); stopLoop = () => { try { zr.reset(); } catch(e){} };
-      zr.decodeFromStream(stream, v, res => { if(res) scHit(res.getText()); }).catch(() => {}); }
-    scStop = () => { stopLoop(); try { if(scTorchOn && scTrack) scTrack.applyConstraints({advanced:[{torch:false}]}); } catch(e){} stream.getTracks().forEach(t => t.stop()); v.srcObject = null; scTrack = null; };
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw {name:'SecurityError'};
+    if(engine === 'native'){
+      const fm = await nativeFormats();
+      if(!fm){ if(scAuto) return startScan('soft'); $('scMsg').textContent = 'This phone has no built-in barcode scanner. Tap "Phone scanner" to switch to the software scanner.'; return; }
+      const stream = await navigator.mediaDevices.getUserMedia({video:CAM_VIDEO, audio:false}); scTrack = stream.getVideoTracks()[0]; v.srcObject = stream; await v.play().catch(() => {}); scSetup();
+      const det = new BarcodeDetector({formats:fm}); let on = true, busy = false, errs = 0; scStop = () => { on = false; };
+      const tick = async () => { if(!on) return;
+        if(!busy && v.readyState >= 2){ busy = true; try { const r = await det.detect(v); errs = 0; if(r.length) scHit(r[0].rawValue); } catch(e){ errs++; } busy = false;
+          if(errs >= 3){ on = false; $('scMsg').textContent = 'The phone scanner is not responding. Switching to the software scanner…'; scAuto = true; setTimeout(() => startScan('soft'), 400); return; } }
+        setTimeout(tick, 70); };
+      tick();
+    } else {
+      await loadZx(); const h = new Map(), B = ZXing.BarcodeFormat;
+      h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [B.EAN_13, B.EAN_8, B.UPC_A, B.UPC_E, B.CODE_128, B.CODE_39, B.CODE_93, B.ITF, B.CODABAR, B.QR_CODE]);
+      const zr = new ZXing.BrowserMultiFormatReader(h, 120); scStop = () => { try { zr.reset(); } catch(e){} };
+      await zr.decodeFromConstraints({video:CAM_VIDEO, audio:false}, v, res => { if(res) scHit(res.getText()); });
+      scTrack = v.srcObject && v.srcObject.getVideoTracks ? v.srcObject.getVideoTracks()[0] : null; scSetup();
+    }
     $('scMsg').textContent = 'Hold the barcode inside the frame. Tap the picture to focus.';
-  } catch(e){ $('scMsg').textContent = 'Camera not available. Allow camera access (the site must be opened with https) or type the barcode instead.'; } }
-function closeScan(){ if(scStop){ scStop(); scStop = null; } if($('sc').open) $('sc').close(); }
+  } catch(e){ $('scMsg').textContent = scErr(e); } }
+function scSwitch(){ scAuto = false; startScan(scEngine === 'native' ? 'soft' : 'native'); }
+async function openScan(cb, once){ scCb = cb; scOnce = !!once; scLast = ''; scAuto = true; $('scMan').value = ''; $('sc').showModal(); startScan((await nativeFormats()) ? 'native' : 'soft'); }
+function closeScan(){ scCleanup(); if($('sc').open) $('sc').close(); }
 
 /* ----- Money strip (fixed at the top of POS and Cash) ----- */
 const stripHtml = (start, bal) => `<div class="mstrip"><div><small>Start</small><b>${start == null ? '—' : peso(start)}</b></div><div class="bal"><small>Balance</small><b>${bal == null ? '—' : peso(bal)}</b></div></div>`;
 
 /* ----- POS: categories | product tiles | current transaction ----- */
-let posCat = 'All', posQ = '', PST = null;
+let posCat = 'All', posQ = '', PST = null, posLinkCode = '';
 const posFilter = () => { const t = norm(posQ).split(/\s+/).filter(Boolean); return adm.filter(p => (posCat === 'All' || p.category === posCat) && t.every(w => norm([p.name, p.category, p.barcode, ...p.tags].join(' ')).includes(w))); };
 function loadPos(){
   $('aPos').innerHTML = `<div id="posStrip"></div><div class="pos">
@@ -837,7 +906,8 @@ function loadPos(){
       <div class="row pos-search" style="flex-wrap:nowrap"><div class="sw"><input id="posIn" placeholder="Scan or type barcode / product name" autocomplete="off" oninput="posSearch()" onkeydown="posKey(event)"><button class="x hide" id="posX" aria-label="Clear" onclick="posClear()">×</button></div>
         <button class="ib" title="Scan a barcode with the camera" aria-label="Scan a barcode" onclick="openScan(posScanned, false)">📷</button></div>
       <p class="msg err hide" id="posNote" style="margin:8px 0 0"></p>
-      <div class="pos-grid" id="posGrid"></div>
+      <div class="alert-box hide" id="posLink"></div>
+      <div class="pos-grid" id="posGrid"><div class="spin-wrap"><span class="spin"></span>Loading products…</div></div>
     </section>
     <section class="pos-panel card" id="posPanel">
       <div class="pos-head" onclick="posToggle()"><b>Current transaction</b><span class="pos-sum" id="posSum"></span><span class="pos-act"><button class="alt del ib" title="Clear the sale" aria-label="Clear the sale" onclick="event.stopPropagation();posReset()">🗑</button><span class="pos-caret">▲</span></span></div>
@@ -857,7 +927,13 @@ function posSetCat(c){ posCat = c; drawPosCats(); drawPosGrid(); }
 function posKey(e){ if(e.key !== 'Enter') return; e.preventDefault(); const v = $('posIn').value.trim(); if(!v) return;
   const hit = adm.find(p => p.barcode && p.barcode === v) || (posFilter().length === 1 ? posFilter()[0] : null);
   if(hit){ const m = posAdd(hit.id); posClear(); if(m && m.indexOf('Only') === 0) show(m); } else show('No product found for "' + v + '". Add its barcode in Inventory.'); }
-function posScanned(code){ const p = adm.find(x => x.barcode && x.barcode === code); return p ? posAdd(p.id) : 'No product with barcode ' + code + '. Add it in Inventory.'; }
+function posScanned(code){ const p = adm.find(x => x.barcode && x.barcode === code); if(p) return posAdd(p.id);
+  posLinkCode = code; drawPosLink(); return 'Barcode ' + code + ' is not linked to a product yet. Close the scanner and tap the product it belongs to.'; }
+function drawPosLink(){ const b = $('posLink'); if(!b) return; b.classList.toggle('hide', !posLinkCode);
+  b.innerHTML = posLinkCode ? `<div class="row" style="flex-wrap:nowrap"><span>🔗 Barcode <b>${esc(posLinkCode)}</b> is not linked yet. <b>Tap the product it belongs to</b> below.</span><button class="alt ib" title="Cancel" aria-label="Cancel" onclick="posLinkCode='';drawPosLink()">✕</button></div>` : ''; }
+function posTap(id){ if(!posLinkCode) return posAdd(id); const p = adm.find(x => x.id === id), code = posLinkCode; if(!p || !confirm('Link barcode ' + code + ' to ' + p.name + '?')) return '';
+  run(async () => { await api('adminSaveProduct', S.token, {id:p.id, name:p.name, category:p.category, price:p.price, stock:p.stock, tags:p.tags, barcode:code, image:'__keep'});
+    p.barcode = code; posLinkCode = ''; drawPosLink(); posAdd(p.id); show('Linked ' + code + ' to ' + p.name + '. Next time just scan it.', 'ok'); }); return ''; }
 function posAdd(id){ const p = adm.find(x => x.id === id); if(!p) return ''; const n = (posCart[id] || 0) + 1;
   if(n > p.stock) return 'Only ' + p.stock + ' of ' + p.name + ' in stock'; posCart[id] = n; posDraw(); return 'Added ' + p.name + ' (' + n + ')'; }
 function posQty(id, d){ const p = adm.find(x => x.id === id), n = (posCart[id] || 0) + d; if(n <= 0) delete posCart[id]; else if(n <= p.stock) posCart[id] = n; posDraw(); }
@@ -865,7 +941,7 @@ function posReset(){ posCart = {}; ['posCash', 'posDisc'].forEach(i => { if($(i)
 function drawPosCats(){ const c = {}; adm.forEach(p => c[p.category] = (c[p.category] || 0) + 1);
   $('posCats').innerHTML = ['All', ...Object.keys(c).sort((a, b) => a.localeCompare(b))].map(n => `<button class="pcat ${n===posCat?'on':''}" data-c="${esc(n)}" onclick="posSetCat(this.dataset.c)"><span>${esc(n)}</span><small>${n==='All' ? adm.length : c[n]}</small></button>`).join(''); }
 function drawPosGrid(){ const f = posFilter().slice(0, 150);
-  $('posGrid').innerHTML = f.map(p => `<button class="ptile" ${p.stock < 1 ? 'disabled' : ''} onclick="posAdd('${p.id}')">${posCart[p.id] ? `<span class="qb">${posCart[p.id]}</span>` : ''}
+  $('posGrid').innerHTML = f.map(p => `<button class="ptile" ${p.stock < 1 ? 'disabled' : ''} onclick="posTap('${p.id}')">${posCart[p.id] ? `<span class="qb">${posCart[p.id]}</span>` : ''}
     <div class="pimg">${imgTag(p.image, 120)}</div><b>${esc(p.name)}</b><span class="price">${peso(p.price)}</span>${p.stock < 1 ? '<small>Out of stock</small>' : p.stock <= 5 ? `<small>${p.stock} left</small>` : ''}</button>`).join('')
     || '<p class="muted">No products found.</p>'; }
 const posSub = () => Object.keys(posCart).reduce((t, id) => { const p = adm.find(x => x.id === id); return t + (p ? p.price * posCart[id] : 0); }, 0);
@@ -886,7 +962,7 @@ function posPay(btn){ const items = Object.keys(posCart).map(id => ({id, qty:pos
     show('Sale ' + r.id + ' recorded: ' + peso(r.total) + (r.change ? ' · change ' + peso(r.change) : '') + '. Stock updated.', 'ok'); }, btn); }
 
 /* ----- Cash in / cash out (tabs: Cash in | Cash out | List) ----- */
-let oDay = '', CS = null, cashTab = 'in', clType = 'all', clFrom = '', clTo = '';
+let knownAw = null, oDay = '', CS = null, cashTab = 'in', clType = 'all', clFrom = '', clTo = '';
 const svcFee = a => !(a > 0) ? 0 : a < 300 ? 5 : a <= 500 ? 10 : a < 1000 ? 15 : 20 * Math.ceil(a / 1000);
 function loadCash(){ return run(async () => { CS = await api('adminStoreState', S.token); ST.open = CS.open; drawStoreBar();
   if(!clFrom) clFrom = clTo = manila().toISOString().slice(0, 10); drawCash(); if(cashTab === 'list') loadCashList(); }); }
@@ -909,7 +985,7 @@ function drawCashBody(){ const b = $('cashBody');
     <button class="alt full" onclick="cashAdd('out', this)">Add cash out</button></div>` + pendingOut();
   else { b.innerHTML = `<div class="card"><div class="three"><div><label for="clType">Type</label><select id="clType" onchange="clType=this.value;loadCashList()"><option value="all">All</option><option value="in">Cash in</option><option value="out">Cash out</option></select></div>
       <div><label for="clFrom">From</label><input id="clFrom" type="date" value="${clFrom}" onchange="clFrom=this.value;loadCashList()"></div>
-      <div><label for="clTo">To</label><input id="clTo" type="date" value="${clTo}" onchange="clTo=this.value;loadCashList()"></div></div><div id="clOut" style="margin-top:8px"></div></div>`; $('clType').value = clType; } }
+      <div><label for="clTo">To</label><input id="clTo" type="date" value="${clTo}" onchange="clTo=this.value;loadCashList()"></div></div><div id="clOut" style="margin-top:8px"><div class="spin-wrap"><span class="spin"></span>Loading…</div></div></div>`; $('clType').value = clType; } }
 function pendingOut(){ const pend = CS.entries.filter(e => e.kind === 'out' && e.status === 'Pending'); if(!pend.length) return '';
   return `<div class="card" style="margin-top:8px"><h3>Pending cash out</h3>` + pend.map(e => `<div class="prow" style="grid-template-columns:1fr auto"><div><b>${peso(e.amount)}</b> <span class="muted">+ fee ${peso(e.fee)}${e.ref ? ' · ' + esc(e.ref) : ''}</span></div>
     <div class="acts"><button title="Mark released: cash handed over" onclick="cashDo('adminCashRelease',${e.id},this)">✓ Release</button><button class="alt del ib" title="Cancel this cash out" aria-label="Cancel" onclick="cashDo('adminCashCancel',${e.id},this)">✕</button></div></div>`).join('') + '</div>'; }
