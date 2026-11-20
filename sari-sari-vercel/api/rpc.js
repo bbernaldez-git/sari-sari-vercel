@@ -237,27 +237,30 @@ async function trackMany(items) {
 }
 
 /* ---------- Admin + cashier ---------- */
-async function adminGetOrders(token) {
+async function adminGetOrders(token, day) {
   await auth(token, STORE_ROLES);
-  const { rows } = await q("select * from orders where status='Pending' or created > now() - interval '7 days' order by created desc");
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? day : new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  const f = new Date(d + 'T00:00:00+08:00'), t = new Date(f.getTime() + 86400000);
+  // one day only (default today); unconfirmed older orders always stay visible so none are forgotten
+  const { rows } = await q("select * from orders where (created >= $1 and created < $2) or status in ('Pending','Awaiting') order by created desc", [f, t]);
   const rm = await riderMap(); return rows.map(o => orderOut(o, rm));
 }
 async function adminPoll(token) {
   await auth(token, STORE_ROLES);
-  const { rows } = await q("select id,name,total,method from orders where status='Pending'");
-  return rows.map(r => ({ id: r.id, name: r.name, total: Number(r.total), method: r.method }));
+  const { rows } = await q("select id,name,total,method,status from orders where status in ('Pending','Awaiting')");
+  return rows.map(r => ({ id: r.id, name: r.name, total: Number(r.total), method: r.method, status: r.status }));
 }
 async function adminReviewOrder(token, orderId, missingIds, adminNote) {
   await auth(token, STORE_ROLES);
   const { rows } = await q('select * from orders where id=$1', [orderId]), o = rows[0];
   if (!o) throw new E('Order not found.');
   if (o.status !== 'Pending') throw new E('This order was already reviewed.');
-  const missing = o.items.filter(i => (missingIds || []).includes(i.id)), status = missing.length ? 'Incomplete' : 'Complete';
+  const missing = o.items.filter(i => (missingIds || []).includes(i.id)), status = missing.length ? 'Awaiting' : 'Complete'; // 'Awaiting' = customer must proceed or cancel
   await q('update orders set status=$1, missing=$2, admin_note=$3 where id=$4', [status, JSON.stringify(missing), String(adminNote || '').slice(0, 300), orderId]);
   let emailed = false;
   if (o.email && emailOn()) {
     const refund = missing.reduce((t, i) => t + i.price * i.qty, 0);
-    let body = `Hi ${o.name},\n\nYour order ${orderId} is ${status.toUpperCase()}.\n`;
+    let body = missing.length ? `Hi ${o.name},\n\nSome items in your order ${orderId} are not available. Please open our website, go to Track order, and choose Proceed or Cancel order.\n` : `Hi ${o.name},\n\nYour order ${orderId} is COMPLETE.\n`;
     if (missing.length) body += `\nMissing items:\n${missing.map(i => `- ${i.qty} x ${i.name}`).join('\n')}\nAmount deducted: PHP ${refund}\nNew total: PHP ${Number(o.total) - refund}\n`;
     if (adminNote) body += `\nNote from the store: ${adminNote}\n`;
     body += '\n' + (o.method === 'Pickup' ? 'Pick up at: ' + STORE_NAME + ' ' + STORE_ADDRESS : 'It will be delivered to ' + o.address + '.');
@@ -308,6 +311,41 @@ async function adminDeleteProduct(token, id) {
   const r = await q('delete from products where id=$1', [String(id)]);
   if (!r.rowCount) throw new E('Product not found (it may already be deleted).');
   return true;
+}
+
+/* ---------- Customer decision when items are missing ---------- */
+async function resolveAwaiting(orderId, action, check) {
+  if (!['proceed', 'cancel'].includes(action)) throw new E('Choose proceed or cancel.');
+  const client = await getPool().connect();
+  try {
+    await client.query('begin');
+    const { rows } = await client.query('select * from orders where id=$1 for update', [orderId]), o = rows[0];
+    if (!o) throw new E('Order not found.');
+    if (check) check(o);
+    if (o.status !== 'Awaiting') throw new E('This order is not waiting for a decision.');
+    if (action === 'proceed') await client.query("update orders set status='Incomplete' where id=$1", [orderId]);
+    else {
+      const miss = (o.missing || []).map(m => m.id);
+      for (const i of o.items) if (!miss.includes(i.id)) await client.query('update products set stock = stock + $1 where id=$2', [i.qty, i.id]);
+      await client.query("update orders set status='Cancelled' where id=$1", [orderId]);
+    }
+    await client.query('commit'); return o;
+  } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
+}
+async function orderRespond(orderId, contact, action) {
+  const d = normPhone(contact), k = idKey(orderId);
+  const f = await q("select id from orders where upper(regexp_replace(id,'[^A-Za-z0-9]','','g')) = $1", [k]);
+  if (!k || !f.rows[0]) throw new E('No order found.');
+  const o = await resolveAwaiting(f.rows[0].id, action, row => { if (normPhone(row.contact) !== d) throw new E('No order found.'); });
+  await notifyStore(`Customer replied: order ${o.id}`, `${o.name} chose to ${action === 'proceed' ? 'PROCEED without the missing items' : 'CANCEL the order'} (${o.id}).`);
+  const { rows } = await q('select * from orders where id=$1', [o.id]);
+  return orderOut(rows[0], await riderMap());
+}
+async function adminResolveOrder(token, orderId, action) { // staff records the customer's answer (for example given by phone)
+  await auth(token, STORE_ROLES);
+  await resolveAwaiting(String(orderId), action);
+  const { rows } = await q('select * from orders where id=$1', [String(orderId)]);
+  return orderOut(rows[0], await riderMap());
 }
 
 /* ---------- Staff management (owner only) ---------- */
@@ -392,14 +430,14 @@ async function adminReport(token, from, to) {
 }
 async function adminStorage(token) {
   await auth(token, ['admin']);
-  const old = await q("select count(*)::int n, min(created) oldest from orders where created < now() - interval '60 days' and status <> 'Pending'");
+  const old = await q("select count(*)::int n, min(created) oldest from orders where created < now() - interval '60 days' and status not in ('Pending','Awaiting')");
   const tot = await q('select count(*)::int n from orders');
   const sz = await q('select pg_database_size(current_database())::bigint b');
   return { oldCount: old.rows[0].n, oldest: old.rows[0].oldest, totalOrders: tot.rows[0].n, sizeMb: Math.round(Number(sz.rows[0].b) / 104857.6) / 10 };
 }
 async function adminPurgeOld(token) {
   await auth(token, ['admin']);
-  const r = await q("delete from orders where created < now() - interval '60 days' and status <> 'Pending'");
+  const r = await q("delete from orders where created < now() - interval '60 days' and status not in ('Pending','Awaiting')");
   await q('delete from sessions where expires < $1', [Date.now()]); await q('delete from admin_codes where expires < $1', [Date.now()]);
   await q('vacuum orders').catch(() => {});
   return { deleted: r.rowCount };
@@ -509,7 +547,7 @@ const fns = { getInfo, getProducts, getRiders, placeOrder, trackOrder, trackMany
   adminGetOrders, adminPoll, adminReviewOrder, adminAssignRider, adminGetProducts, adminSaveProduct, adminDeleteProduct,
   adminListStaff, adminSaveStaff, adminDeleteStaff, riderOrders, riderPoll, riderRespond,
   adminTestEmail, adminReport, adminStorage, adminPurgeOld,
-  adminStoreState, adminCashList, adminStoreOpen, adminStoreClose, adminCashAdd, adminCashRelease, adminCashCancel, posSale };
+  orderRespond, adminResolveOrder, adminStoreState, adminCashList, adminStoreOpen, adminStoreClose, adminCashAdd, adminCashRelease, adminCashCancel, posSale };
 
 module.exports = async (req, res) => {
   try {
