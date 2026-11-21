@@ -14,9 +14,9 @@ const json = (s, f) => { try { return JSON.parse(s); } catch (e) { return f; } }
     if (kind === 'products') {
       if (!r.ID || !r.Name) continue;
       const img = /^https:\/\/res\.cloudinary\.com\//.test(r.Image || '') ? r.Image : '';
-      await pool.query(`insert into products(id,name,category,price,stock,tags,image) values ($1,$2,$3,$4,$5,$6,$7)
-        on conflict (id) do update set name=$2, category=$3, price=$4, stock=$5, tags=$6, image=$7`,
-        [r.ID, r.Name, r.Category || 'Other', Number(r.Price) || 0, Math.max(0, parseInt(r.Stock, 10) || 0), r.Tags || '', img]);
+      await pool.query(`insert into products(id,name,category,price,stock,tags,image,type) values ($1,$2,$3,$4,$5,$6,$7,$8)
+        on conflict (id) do update set name=$2, category=$3, price=$4, stock=$5, tags=$6, image=$7, type=$8`,
+        [r.ID, r.Name, r.Category || 'Other', Number(r.Price) || 0, Math.max(0, parseInt(r.Stock, 10) || 0), r.Tags || '', img, String(r.Type).toLowerCase() === 'wholesale' ? 'wholesale' : 'retail']);
     } else {
       if (!r.OrderID) continue;
       const d = new Date(r.Created);
