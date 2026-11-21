@@ -3,7 +3,8 @@ const crypto = require('crypto');
 const STORE_NAME = process.env.STORE_NAME || 'Jeriel Store';
 const STORE_ADDRESS = process.env.STORE_ADDRESS || '743 Block 4, Gumaoc East, San Jose Del Monte, Bulacan';
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-const MARKUP = Number(process.env.MARKUP || 1);
+const MARKUP = Number(process.env.MARKUP || 1);            // online retail price = store price + this
+const MARKUP_W = Number(process.env.WHOLESALE_MARKUP || 0); // wholesale items: no extra charge unless you set WHOLESALE_MARKUP
 const CODE_MIN = 10, SESSION_DAYS = 7, ONLINE_MS = 90000;
 const STORE_ROLES = ['admin', 'cashier'];
 const DELIVERY_ENABLED = process.env.DELIVERY_ENABLED === '1'; // delivery is paused until you set this to 1 in Vercel
@@ -25,6 +26,7 @@ create table if not exists staff (email text primary key, rid text unique not nu
   phone text not null default '', pass text not null, active boolean not null default true, last_seen bigint not null default 0);
 alter table products add column if not exists barcode text not null default '';
 create index if not exists products_barcode_idx on products (barcode);
+alter table products add column if not exists type text not null default 'retail';
 create table if not exists store_sessions (id serial primary key, opened_at timestamptz not null default now(), opened_by text not null,
   start_amount numeric not null, closed_at timestamptz, closed_by text, end_amount numeric);
 create table if not exists cash_entries (id serial primary key, session_id int not null, created timestamptz not null default now(),
@@ -115,7 +117,7 @@ async function createSession(email, role, name) {
   return { token, role, email, name };
 }
 const currentSession = async () => (await q('select * from store_sessions where closed_at is null order by id desc limit 1')).rows[0];
-const prod = r => ({ barcode: r.barcode || '', id: r.id, name: r.name, category: r.category, price: Number(r.price), stock: r.stock, image: r.image,
+const prod = r => ({ type: r.type === 'wholesale' ? 'wholesale' : 'retail', barcode: r.barcode || '', id: r.id, name: r.name, category: r.category, price: Number(r.price), stock: r.stock, image: r.image,
   tags: String(r.tags || '').split(',').map(t => t.trim()).filter(Boolean) });
 async function riderMap() {
   const { rows } = await q("select rid,name,phone from staff where role='delivery'");
@@ -168,7 +170,7 @@ async function getInfo() {
 }
 async function getProducts() {
   const { rows } = await q('select * from products order by name');
-  return rows.map(prod).map(p => ({ ...p, price: p.price + MARKUP }));
+  return rows.map(prod).map(p => ({ ...p, price: p.price + (p.type === 'wholesale' ? MARKUP_W : MARKUP) }));
 }
 async function getRiders() {
   const { rows } = await q("select rid,name,phone,last_seen from staff where role='delivery' and active order by name");
@@ -202,7 +204,7 @@ async function placeOrder(o) {
       const p = rows.find(r => r.id === c.id), qty = Math.floor(Number(c.qty));
       if (!p || !(qty >= 1 && qty <= 99)) throw new E('Invalid item in cart.');
       if (qty > p.stock) throw new E(`Only ${p.stock} left of ${p.name}. Please update your cart.`);
-      const price = Number(p.price) + MARKUP;
+      const price = Number(p.price) + (p.type === 'wholesale' ? MARKUP_W : MARKUP);
       items.push({ id: p.id, name: p.name, price, qty }); total += price * qty;
       await client.query('update products set stock = stock - $1 where id = $2', [qty, p.id]);
     }
@@ -292,17 +294,18 @@ async function adminSaveProduct(token, p) {
   const img = String(p.image == null ? '__keep' : p.image);
   if (img !== '' && img !== '__keep' && (!/^https:\/\/res\.cloudinary\.com\/\S+$/.test(img) || img.length > 500)) throw new E('Image link is invalid. Please upload the image again.');
   const barcode = String(p.barcode || '').trim().slice(0, 64);
+  const type = p.type === 'wholesale' ? 'wholesale' : p.type === 'retail' ? 'retail' : null; // null = keep the current type
   if (barcode) {
     const d = await q('select name from products where barcode=$1 and id <> $2', [barcode, String(p.id || '')]);
     if (d.rows[0]) throw new E(`That barcode is already used by ${d.rows[0].name}.`);
   }
   if (p.id) {
-    const r = await q('update products set name=$1, category=$2, price=$3, stock=$4, tags=$5, image = case when $6 = $7 then image else $6 end, barcode=$9 where id=$8',
-      [name, category, price, stock, tags, img, '__keep', p.id, barcode]);
+    const r = await q('update products set name=$1, category=$2, price=$3, stock=$4, tags=$5, image = case when $6 = $7 then image else $6 end, barcode=$9, type = coalesce($10::text, type) where id=$8',
+      [name, category, price, stock, tags, img, '__keep', p.id, barcode, type]);
     if (!r.rowCount) throw new E('Product not found.');
   } else {
-    await q('insert into products(id,name,category,price,stock,tags,image,barcode) values ($1,$2,$3,$4,$5,$6,$7,$8)',
-      ['P' + Date.now(), name, category, price, stock, tags, img === '__keep' ? '' : img, barcode]);
+    await q('insert into products(id,name,category,price,stock,tags,image,barcode,type) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+      ['P' + Date.now(), name, category, price, stock, tags, img === '__keep' ? '' : img, barcode, type || 'retail']);
   }
   return true;
 }
