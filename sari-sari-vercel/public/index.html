@@ -154,7 +154,7 @@ input[type=search]::-webkit-search-cancel-button{display:none}
 .x{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:28px;height:28px;padding:0;border-radius:50%;background:var(--line);color:var(--ink);font-size:1.15rem;line-height:1}
 .shopwrap{display:flex;gap:14px;align-items:flex-start}
 .shopmain{flex:1;min-width:0}
-#side{width:220px;flex:none;position:sticky;top:calc(var(--hh,0px) + 78px);max-height:calc(100vh - 190px);overflow:auto}
+#side{width:220px;flex:none;position:sticky;top:calc(var(--hh,0px) + var(--bh,86px) + 8px);max-height:calc(100vh - var(--hh,0px) - var(--bh,86px) - 100px);overflow:auto}
 #side.collapsed{display:none}
 #side h3{margin-bottom:6px}
 .cat{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;color:var(--ink);text-align:left;padding:8px 10px;border-radius:8px;font-weight:500}
@@ -220,6 +220,7 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
   <!-- Customer: shop -->
   <div id="shop" class="v">
     <div class="bar">
+      <div class="segs" id="shopTabs" style="margin:0 0 6px"></div>
       <div class="row" style="flex-wrap:nowrap">
         <button class="alt" id="sideBtn" onclick="toggleSide()" aria-controls="side" aria-label="Categories">☰<span class="lbl"> Categories</span></button>
         <div class="sw"><input id="search" type="search" placeholder="Search: pancit canton, sabon, kape..." aria-label="Search products" oninput="onSearch()" autocomplete="off">
@@ -328,9 +329,11 @@ dialog::backdrop{background:rgba(20,33,61,.55)}
 <dialog id="pd" aria-labelledby="pdTitle">
   <h2 id="pdTitle">Product</h2>
   <div id="pErr"></div>
-  <label for="pName">Product name</label><input id="pName" onblur="autoTags()">
+  <label for="pName">Product name</label><input id="pName">
   <label for="pBar">Barcode <span class="muted">(optional, used by POS)</span></label>
   <div class="row" style="flex-wrap:nowrap"><input id="pBar" inputmode="numeric" autocomplete="off"><button class="alt ib" title="Scan the barcode" aria-label="Scan the barcode" onclick="openScan(c => { $('pBar').value = c; return 'Got ' + c; }, true)">📷</button></div>
+  <label for="pType">Sold as</label>
+  <select id="pType"><option value="retail">Retail (per piece)</option><option value="wholesale">Wholesale (bulk / box)</option></select>
   <label>Product image</label>
   <div class="row" style="justify-content:flex-start"><div class="pimg thumb" id="pPrev" style="width:80px;height:80px"></div>
     <div style="flex:1;min-width:180px"><input type="file" id="pFile" accept="image/*" onchange="pickImg(this)">
@@ -473,19 +476,23 @@ function ctl(p){ const n = cart[p.id] || 0;
   return n ? `<div class="qty"><button class="alt" aria-label="Remove one ${esc(p.name)}" onclick="chg('${p.id}',-1)">−</button><b>${n}</b>
       <button aria-label="Add one ${esc(p.name)}" ${n>=p.stock?'disabled':''} onclick="chg('${p.id}',1)">+</button></div>`
     : `<button class="go full" ${p.stock<1?'disabled':''} onclick="chg('${p.id}',1)">${p.stock<1?'Out of stock':'Add to cart'}</button>`; }
+const isW = p => p.type === 'wholesale';
+const typeTabs = (cur, fn, list) => ['retail', 'wholesale'].map(t => `<button class="${cur === t ? 'on' : ''}" onclick="${fn}('${t}')">${t === 'retail' ? '🛒 Retail' : '📦 Wholesale'} <small>(${list.filter(p => (isW(p) ? 'wholesale' : 'retail') === t).length})</small></button>`).join('');
+function setShopType(t){ shopType = t; cat = 'All'; lim = 40; drawShop(); window.scrollTo(0, 0); }
 function drawShop(){
-  const counts = {}; products.forEach(p => counts[p.category] = (counts[p.category]||0) + 1);
+  $('shopTabs').innerHTML = typeTabs(shopType, 'setShopType', products);
+  const pl = products.filter(p => (isW(p) ? 'wholesale' : 'retail') === shopType), counts = {}; pl.forEach(p => counts[p.category] = (counts[p.category]||0) + 1);
   const names = Object.keys(counts).filter(Boolean).sort((a,b) => a.localeCompare(b));
   $('side').innerHTML = '<h3>Categories</h3>' + ['All', ...names].map(c =>
-    `<button class="cat ${c===cat?'on':''}" onclick="setCat(this.dataset.c)" data-c="${esc(c)}"><span>${esc(c)}</span><small>${c==='All'?products.length:counts[c]}</small></button>`).join('');
+    `<button class="cat ${c===cat?'on':''}" onclick="setCat(this.dataset.c)" data-c="${esc(c)}"><span>${esc(c)}</span><small>${c==='All'?pl.length:counts[c]}</small></button>`).join('');
   const terms = norm(q).split(/\s+/).filter(Boolean);
-  const f = products.filter(p => (cat==='All' || p.category===cat) && terms.every(t => p._s.includes(t)));
+  const f = pl.filter(p => (cat==='All' || p.category===cat) && terms.every(t => p._s.includes(t)));
   $('count').textContent = f.length + (f.length===1 ? ' product' : ' products') + (cat!=='All' ? ' in ' + cat : '');
   $('products').innerHTML = f.slice(0, lim).map(p => `<div class="card">${pimg(p)}
     <b>${esc(p.name)}</b><div class="muted">${esc(p.category)}</div>
     <div class="price">${peso(p.price)}</div>
     <div class="ctl" id="c_${p.id}">${ctl(p)}</div></div>`).join('')
-    || '<p>No match. Try a shorter word like "noodles" or "soap".</p>';
+    || (pl.length ? '<p>No match. Try a shorter word like "noodles" or "soap".</p>' : `<p>No ${shopType} products yet.</p>`);
   $('more').classList.toggle('hide', f.length <= lim);
   applySide(); updateCart();
 }
@@ -504,7 +511,7 @@ function drawCartView(){
   store('sariC', cart);
   const {n, t} = cartTotals();
   $('cartLines').innerHTML = n ? Object.keys(cart).map(id => { const p = products.find(x => x.id===id); if(!p) return '';
-    return `<div class="line"><div><b>${esc(p.name)}</b><div class="muted">${peso(p.price)} each</div></div>
+    return `<div class="line"><div><b>${esc(p.name)}</b><div class="muted">${peso(p.price)} each${isW(p) ? ' · Wholesale' : ''}</div></div>
       <div class="qty"><button class="alt" aria-label="Remove one ${esc(p.name)}" onclick="chg('${id}',-1)">−</button><b>${cart[id]}</b>
       <button aria-label="Add one ${esc(p.name)}" ${cart[id]>=p.stock?'disabled':''} onclick="chg('${id}',1)">+</button></div>
       <div>${peso(p.price*cart[id])}</div></div>`; }).join('')
@@ -673,23 +680,25 @@ function review(id, btn){
 /* ----- Admin inventory (CRUD) ----- */
 const cats = () => [...new Set(adm.map(p => p.category).filter(Boolean))].sort();
 function loadAdminProducts(){
-  $('aProducts').innerHTML = `<div class="row inv-top" style="flex-wrap:nowrap;gap:6px"><div class="sw"><input id="aSearch" type="search" placeholder="Search inventory" aria-label="Search inventory" oninput="aq=this.value;$('aSx').classList.toggle('hide',!aq);drawAdm()"><button class="x hide" id="aSx" aria-label="Clear search" onclick="aq='';$('aSearch').value='';this.classList.add('hide');drawAdm()">×</button></div>
-    <button class="alt ib" title="Clear and refresh" aria-label="Clear and refresh" onclick="resetInv()">↻</button> <button class="go ib" title="Add product" aria-label="Add product" onclick="editProd()">＋</button></div><div id="admList"><div class="spin-wrap"><span class="spin"></span>Loading products…</div></div>`;
+  $('aProducts').innerHTML = `<div class="inv-top"><div class="segs" id="invTabs" style="margin:0 0 6px"></div><div class="row" style="flex-wrap:nowrap;gap:6px"><div class="sw"><input id="aSearch" type="search" placeholder="Search inventory" aria-label="Search inventory" oninput="aq=this.value;$('aSx').classList.toggle('hide',!aq);drawAdm()"><button class="x hide" id="aSx" aria-label="Clear search" onclick="aq='';$('aSearch').value='';this.classList.add('hide');drawAdm()">×</button></div>
+    <button class="alt ib" title="Clear and refresh" aria-label="Clear and refresh" onclick="resetInv()">↻</button> <button class="go ib" title="Add product" aria-label="Add product" onclick="editProd()">＋</button></div></div><div id="admList"><div class="spin-wrap"><span class="spin"></span>Loading products…</div></div>`;
   return run(async () => { adm = await api('adminGetProducts', S.token); drawAdm(); }); }
+function setInvType(t){ invType = t; drawAdm(); }
 function drawAdm(){
-  const terms = norm(aq).split(/\s+/).filter(Boolean);
-  const f = adm.filter(p => { const x = norm([p.name, p.category, p.barcode, ...p.tags].join(' ')); return terms.every(t => x.includes(t)); })
+  $('invTabs').innerHTML = typeTabs(invType, 'setInvType', adm);
+  const terms = norm(aq).split(/\s+/).filter(Boolean), inType = adm.filter(p => (isW(p) ? 'wholesale' : 'retail') === invType);
+  const f = inType.filter(p => { const x = norm([p.name, p.category, p.barcode, ...p.tags].join(' ')); return terms.every(t => x.includes(t)); })
     .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
   $('admList').innerHTML = (f.length ? '<div class="inv-grid">' + f.map(p => `<div class="itile"><div class="pimg">${imgTag(p.image, 120)}</div>
       <b>${esc(p.name)}</b><div class="muted" title="${esc(p.category)}${p.barcode ? ' · ' + esc(p.barcode) : ''}">${esc(p.category)}${p.barcode ? ' · ' + esc(p.barcode) : ''}</div>
       <div class="irow"><span class="price">${peso(p.price)}</span><span class="${p.stock <= 5 ? 'miss' : ''}">${p.stock} pcs</span></div>
       <div class="acts"><button class="alt ib" title="Edit" aria-label="Edit" onclick="editProd('${p.id}')">✎</button>${S.role==='admin' ? `<button class="alt del ib" title="Delete" aria-label="Delete" onclick="delProd('${p.id}')">🗑</button>` : ''}</div></div>`).join('') + '</div>'
-    : '<p>No products found.</p>') + `<p class="muted" style="margin-top:8px">${f.length} of ${adm.length} products · ${adm.filter(p => p.image).length} with images saved</p>`; }
+    : '<p>No products found.</p>') + `<p class="muted" style="margin-top:8px">${f.length} of ${inType.length} ${invType} products · ${inType.filter(p => p.image).length} with images saved</p>`; }
 function editProd(id){
-  const p = adm.find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[]};
+  const p = adm.find(x => x.id===id) || {name:'', category:'', price:'', stock:'', tags:[], type:invType};
   $('pdTitle').textContent = id ? 'Edit product' : 'Add product'; $('pErr').innerHTML = ''; $('pd').dataset.id = id || '';
   img = p.image || ''; imgChanged = false; showPrev(); $('pFile').value = ''; $('pUp').textContent = '';
-  $('pName').value = p.name; $('pBar').value = p.barcode || ''; $('pPrice').value = p.price; $('pStock').value = p.stock; $('tagIn').value = ''; tags = [...p.tags]; drawTags();
+  $('pName').value = p.name; $('pBar').value = p.barcode || ''; $('pType').value = p.type === 'wholesale' ? 'wholesale' : 'retail'; $('pPrice').value = p.price; $('pStock').value = p.stock; $('tagIn').value = ''; tags = [...p.tags]; drawTags();
   $('pCat').innerHTML = cats().map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__new">+ New category…</option>';
   $('pCat').value = p.category || (cats()[0] || '__new');
   $('pNewCat').value = ''; $('pNewCat').classList.toggle('hide', $('pCat').value!=='__new');
@@ -717,11 +726,12 @@ function tagKey(e){ const i = e.target;
   else if(e.key==='Backspace' && !i.value){ tags.pop(); drawTags(); } }
 function autoTags(){ if(!tags.length) addTags($('pName').value.replace(/[^\w\s]/g,' ').split(/\s+/).filter(w => w.length>2).join(',')); }
 async function saveProd(){
+  if(!$('pd').dataset.id) autoTags(); /* new products get tags from the name when saved (doing it on blur moved the Save button away from the click) */
   addTags($('tagIn').value); $('tagIn').value = '';
   const sel = $('pCat').value, category = sel==='__new' ? $('pNewCat').value.trim() : sel;
-  const p = {id:$('pd').dataset.id, name:$('pName').value, category, price:parseFloat($('pPrice').value), stock:parseInt($('pStock').value,10), tags, barcode: $('pBar').value.trim(), image: imgChanged ? img : '__keep'};
+  const p = {id:$('pd').dataset.id, name:$('pName').value, category, price:parseFloat($('pPrice').value), stock:parseInt($('pStock').value,10), tags, type: $('pType').value, barcode: $('pBar').value.trim(), image: imgChanged ? img : '__keep'};
   $('pSave').disabled = true;
-  try { await api('adminSaveProduct', S.token, p); $('pd').close(); sessionStorage.removeItem('sariP');
+  try { await api('adminSaveProduct', S.token, p); invType = p.type; $('pd').close(); sessionStorage.removeItem('sariP');
     await loadAdminProducts(); show('Saved ' + p.name + '.', 'ok');
   } catch(e){ $('pErr').innerHTML = `<div class="msg err" role="alert">${esc(e.message || e)}</div>`; }
   $('pSave').disabled = false; }
@@ -898,7 +908,7 @@ const stripHtml = (start, bal) => `<div class="mstrip"><div><small>Start</small>
 
 /* ----- POS: categories | product tiles | current transaction ----- */
 let posCat = 'All', posQ = '', PST = null, posLinkCode = '';
-const posFilter = () => { const t = norm(posQ).split(/\s+/).filter(Boolean); return adm.filter(p => (posCat === 'All' || p.category === posCat) && t.every(w => norm([p.name, p.category, p.barcode, ...p.tags].join(' ')).includes(w))); };
+const posFilter = () => { const t = norm(posQ).split(/\s+/).filter(Boolean); return adm.filter(p => (isW(p) ? 'wholesale' : 'retail') === posType && (posCat === 'All' || p.category === posCat) && t.every(w => norm([p.name, p.category, p.barcode, ...p.tags].join(' ')).includes(w))); };
 function loadPos(){
   $('aPos').innerHTML = `<div id="posStrip"></div><div class="pos">
     <aside class="pos-cats" id="posCats" aria-label="Categories"></aside>
@@ -932,14 +942,16 @@ function posScanned(code){ const p = adm.find(x => x.barcode && x.barcode === co
 function drawPosLink(){ const b = $('posLink'); if(!b) return; b.classList.toggle('hide', !posLinkCode);
   b.innerHTML = posLinkCode ? `<div class="row" style="flex-wrap:nowrap"><span>🔗 Barcode <b>${esc(posLinkCode)}</b> is not linked yet. <b>Tap the product it belongs to</b> below.</span><button class="alt ib" title="Cancel" aria-label="Cancel" onclick="posLinkCode='';drawPosLink()">✕</button></div>` : ''; }
 function posTap(id){ if(!posLinkCode) return posAdd(id); const p = adm.find(x => x.id === id), code = posLinkCode; if(!p || !confirm('Link barcode ' + code + ' to ' + p.name + '?')) return '';
-  run(async () => { await api('adminSaveProduct', S.token, {id:p.id, name:p.name, category:p.category, price:p.price, stock:p.stock, tags:p.tags, barcode:code, image:'__keep'});
+  run(async () => { await api('adminSaveProduct', S.token, {id:p.id, name:p.name, category:p.category, price:p.price, stock:p.stock, tags:p.tags, type:p.type, barcode:code, image:'__keep'});
     p.barcode = code; posLinkCode = ''; drawPosLink(); posAdd(p.id); show('Linked ' + code + ' to ' + p.name + '. Next time just scan it.', 'ok'); }); return ''; }
 function posAdd(id){ const p = adm.find(x => x.id === id); if(!p) return ''; const n = (posCart[id] || 0) + 1;
   if(n > p.stock) return 'Only ' + p.stock + ' of ' + p.name + ' in stock'; posCart[id] = n; posDraw(); return 'Added ' + p.name + ' (' + n + ')'; }
 function posQty(id, d){ const p = adm.find(x => x.id === id), n = (posCart[id] || 0) + d; if(n <= 0) delete posCart[id]; else if(n <= p.stock) posCart[id] = n; posDraw(); }
 function posReset(){ posCart = {}; ['posCash', 'posDisc'].forEach(i => { if($(i)) $(i).value = ''; }); posDraw(); }
-function drawPosCats(){ const c = {}; adm.forEach(p => c[p.category] = (c[p.category] || 0) + 1);
-  $('posCats').innerHTML = ['All', ...Object.keys(c).sort((a, b) => a.localeCompare(b))].map(n => `<button class="pcat ${n===posCat?'on':''}" data-c="${esc(n)}" onclick="posSetCat(this.dataset.c)"><span>${esc(n)}</span><small>${n==='All' ? adm.length : c[n]}</small></button>`).join(''); }
+function posSetType(t){ posType = t; posCat = 'All'; posDraw(); }
+function drawPosCats(){ const pl = adm.filter(p => (isW(p) ? 'wholesale' : 'retail') === posType), c = {}; pl.forEach(p => c[p.category] = (c[p.category] || 0) + 1);
+  const tt = ['retail', 'wholesale'].map(t => `<button class="pcat ${t === posType ? 'on' : ''}" onclick="posSetType('${t}')"><span>${t === 'retail' ? '🛒 Retail' : '📦 Wholesale'}</span></button>`).join('');
+  $('posCats').innerHTML = tt + ['All', ...Object.keys(c).sort((a, b) => a.localeCompare(b))].map(n => `<button class="pcat ${n===posCat?'on':''}" data-c="${esc(n)}" onclick="posSetCat(this.dataset.c)"><span>${esc(n)}</span><small>${n==='All' ? pl.length : c[n]}</small></button>`).join(''); }
 function drawPosGrid(){ const f = posFilter().slice(0, 150);
   $('posGrid').innerHTML = f.map(p => `<button class="ptile" ${p.stock < 1 ? 'disabled' : ''} onclick="posTap('${p.id}')">${posCart[p.id] ? `<span class="qb">${posCart[p.id]}</span>` : ''}
     <div class="pimg">${imgTag(p.image, 120)}</div><b>${esc(p.name)}</b><span class="price">${peso(p.price)}</span>${p.stock < 1 ? '<small>Out of stock</small>' : p.stock <= 5 ? `<small>${p.stock} left</small>` : ''}</button>`).join('')
@@ -962,7 +974,7 @@ function posPay(btn){ const items = Object.keys(posCart).map(id => ({id, qty:pos
     show('Sale ' + r.id + ' recorded: ' + peso(r.total) + (r.change ? ' · change ' + peso(r.change) : '') + '. Stock updated.', 'ok'); }, btn); }
 
 /* ----- Cash in / cash out (tabs: Cash in | Cash out | List) ----- */
-let knownAw = null, oDay = '', CS = null, cashTab = 'in', clType = 'all', clFrom = '', clTo = '';
+let shopType = 'retail', invType = 'retail', posType = 'retail', knownAw = null, oDay = '', CS = null, cashTab = 'in', clType = 'all', clFrom = '', clTo = '';
 const svcFee = a => !(a > 0) ? 0 : a < 300 ? 5 : a <= 500 ? 10 : a < 1000 ? 15 : 20 * Math.ceil(a / 1000);
 function loadCash(){ return run(async () => { CS = await api('adminStoreState', S.token); ST.open = CS.open; drawStoreBar();
   if(!clFrom) clFrom = clTo = manila().toISOString().slice(0, 10); drawCash(); if(cashTab === 'list') loadCashList(); }); }
@@ -1021,7 +1033,7 @@ function respond(id, action, btn){ run(async () => { await api('riderRespond', S
 api('getInfo').then(i => { ADDR = i.address; STORE = i.name; CLD = {cloud:i.cloud || '', preset:i.preset || ''}; applyInfo(i);
   if(i.emailCodes) $('codeLink').classList.remove('hide');
   document.querySelectorAll('.stName').forEach(e => e.textContent = STORE); document.querySelectorAll('.stAddr').forEach(e => e.textContent = ADDR); toggleAddr(); }).catch(() => {});
-try { const ro = new ResizeObserver(() => { const st = document.documentElement.style; st.setProperty('--hh', $('top').offsetHeight + 'px'); st.setProperty('--bnh', ($('bnA').offsetHeight || 60) + 'px'); }); ro.observe($('top')); ro.observe($('bnA')); } catch(e){}
+try { const ro = new ResizeObserver(() => { const st = document.documentElement.style; st.setProperty('--hh', $('top').offsetHeight + 'px'); const br = document.querySelector('.bar'); if(br) st.setProperty('--bh', br.offsetHeight + 'px'); st.setProperty('--bnh', ($('bnA').offsetHeight || 60) + 'px'); }); ro.observe($('top')); ro.observe($('bnA')); const bar0 = document.querySelector('.bar'); if(bar0) ro.observe(bar0); } catch(e){}
 cart = load('sariC') || {};
 const saved = load('sariA');
 if(saved && saved.token){ S = saved; startAdmin(); }
