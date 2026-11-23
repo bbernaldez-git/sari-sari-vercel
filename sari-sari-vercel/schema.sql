@@ -13,6 +13,9 @@ create table if not exists staff (email text primary key, rid text unique not nu
   phone text not null default '', pass text not null, active boolean not null default true, last_seen bigint not null default 0);
 alter table products add column if not exists barcode text not null default '';
 create index if not exists products_barcode_idx on products (barcode);
+alter table products add column if not exists type text not null default 'retail';
+alter table orders add column if not exists picked_up_at timestamptz;
+alter table orders add column if not exists cancel_reason text not null default '';
 create table if not exists store_sessions (id serial primary key, opened_at timestamptz not null default now(), opened_by text not null,
   start_amount numeric not null, closed_at timestamptz, closed_by text, end_amount numeric);
 create table if not exists cash_entries (id serial primary key, session_id int not null, created timestamptz not null default now(),
