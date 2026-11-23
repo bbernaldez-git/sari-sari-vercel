@@ -27,6 +27,8 @@ create table if not exists staff (email text primary key, rid text unique not nu
 alter table products add column if not exists barcode text not null default '';
 create index if not exists products_barcode_idx on products (barcode);
 alter table products add column if not exists type text not null default 'retail';
+alter table orders add column if not exists picked_up_at timestamptz;
+alter table orders add column if not exists cancel_reason text not null default '';
 create table if not exists store_sessions (id serial primary key, opened_at timestamptz not null default now(), opened_by text not null,
   start_amount numeric not null, closed_at timestamptz, closed_by text, end_amount numeric);
 create table if not exists cash_entries (id serial primary key, session_id int not null, created timestamptz not null default now(),
@@ -125,7 +127,7 @@ async function riderMap() {
 }
 const orderOut = (o, rm) => ({ id: o.id, created: new Date(o.created).toISOString(), email: o.email, name: o.name, contact: o.contact,
   address: o.address, method: o.method, items: o.items, total: Number(o.total), status: o.status, missing: o.missing,
-  adminNote: o.admin_note, note: o.note, deliveryStatus: o.delivery_status,
+  adminNote: o.admin_note, note: o.note, deliveryStatus: o.delivery_status, pickedUp: o.picked_up_at ? new Date(o.picked_up_at).toISOString() : null, cancelReason: o.cancel_reason || '',
   rider: o.rider ? ((rm || {})[o.rider] || { id: o.rider, name: 'Rider', phone: '' }) : null });
 
 /* ---------- Sign-in ---------- */
@@ -244,7 +246,7 @@ async function adminGetOrders(token, day) {
   const d = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? day : new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
   const f = new Date(d + 'T00:00:00+08:00'), t = new Date(f.getTime() + 86400000);
   // one day only (default today); unconfirmed older orders always stay visible so none are forgotten
-  const { rows } = await q("select * from orders where (created >= $1 and created < $2) or status in ('Pending','Awaiting') order by created desc", [f, t]);
+  const { rows } = await q("select * from orders where (created >= $1 and created < $2) or status in ('Pending','Awaiting') or (method='Pickup' and status in ('Complete','Incomplete') and picked_up_at is null) order by created desc", [f, t]);
   const rm = await riderMap(); return rows.map(o => orderOut(o, rm));
 }
 async function adminPoll(token) {
@@ -330,7 +332,7 @@ async function resolveAwaiting(orderId, action, check) {
     else {
       const miss = (o.missing || []).map(m => m.id);
       for (const i of o.items) if (!miss.includes(i.id)) await client.query('update products set stock = stock + $1 where id=$2', [i.qty, i.id]);
-      await client.query("update orders set status='Cancelled' where id=$1", [orderId]);
+      await client.query("update orders set status='Cancelled', cancel_reason=$2 where id=$1", [orderId, 'Cancelled (items were missing)']);
     }
     await client.query('commit'); return o;
   } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
@@ -349,6 +351,54 @@ async function adminResolveOrder(token, orderId, action) { // staff records the 
   await resolveAwaiting(String(orderId), action);
   const { rows } = await q('select * from orders where id=$1', [String(orderId)]);
   return orderOut(rows[0], await riderMap());
+}
+
+/* ---------- Pickup and cancellations ---------- */
+async function cancelAndRestock(client, o, reason) {
+  const miss = (o.missing || []).map(m => m.id); // items that were missing never came back into stock
+  for (const i of o.items) if (!miss.includes(i.id)) await client.query('update products set stock = stock + $1 where id=$2', [i.qty, i.id]);
+  await client.query("update orders set status='Cancelled', cancel_reason=$2 where id=$1", [o.id, reason]);
+}
+// The customer may cancel an order the store has not confirmed for more than 1 hour
+async function orderCancel(orderId, contact) {
+  const d = normPhone(contact), k = idKey(orderId);
+  const f = await q("select id from orders where upper(regexp_replace(id,'[^A-Za-z0-9]','','g')) = $1", [k]);
+  if (!k || !f.rows[0]) throw new E('No order found.');
+  const client = await getPool().connect(); let o;
+  try {
+    await client.query('begin');
+    const { rows } = await client.query('select * from orders where id=$1 for update', [f.rows[0].id]); o = rows[0];
+    if (!o || normPhone(o.contact) !== d) throw new E('No order found.');
+    if (o.status !== 'Pending') throw new E('This order can no longer be cancelled here.');
+    if (Date.now() - new Date(o.created).getTime() < 3600e3) throw new E('You can cancel once the store has taken more than 1 hour to confirm your order.');
+    await cancelAndRestock(client, o, 'Cancelled by the customer (not confirmed within 1 hour)');
+    await client.query('commit');
+  } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
+  await notifyStore(`Customer cancelled: order ${o.id}`, `${o.name} cancelled order ${o.id} because it was not confirmed within 1 hour.`);
+  const { rows } = await q('select * from orders where id=$1', [o.id]);
+  return orderOut(rows[0], await riderMap());
+}
+async function adminMarkPickedUp(token, id) {
+  await auth(token, STORE_ROLES);
+  const u = await q("update orders set picked_up_at=now() where id=$1 and method='Pickup' and status in ('Complete','Incomplete') and picked_up_at is null", [String(id)]);
+  if (!u.rowCount) throw new E('This order cannot be marked as picked up.');
+  return true;
+}
+// End of day: cancel ready pickup orders that nobody collected (stock goes back, customer is emailed if possible)
+async function adminCancelUnclaimed(token, ids) {
+  await auth(token, STORE_ROLES);
+  const list = (Array.isArray(ids) ? ids : [ids]).map(String).slice(0, 200); let n = 0;
+  for (const id of list) {
+    const client = await getPool().connect(); let o = null, done = false;
+    try {
+      await client.query('begin');
+      const { rows } = await client.query('select * from orders where id=$1 for update', [id]); o = rows[0];
+      if (o && o.method === 'Pickup' && ['Complete', 'Incomplete'].includes(o.status) && !o.picked_up_at) { await cancelAndRestock(client, o, 'Cancelled: not picked up'); done = true; }
+      await client.query(done ? 'commit' : 'rollback');
+    } catch (e) { await client.query('rollback').catch(() => {}); throw e; } finally { client.release(); }
+    if (done) { n++; if (o.email && emailOn()) await tryMail(o.email, `Order ${o.id} was cancelled`, `Hi ${o.name},\n\nYour order ${o.id} was cancelled because it was not picked up. Please order again anytime.\n\n${STORE_NAME}`); }
+  }
+  return { cancelled: n };
 }
 
 /* ---------- Staff management (owner only) ---------- */
@@ -493,7 +543,8 @@ async function adminStoreClose(token) {
   const { totals } = await cashTotals(s);
   if (totals.outPending > 0) throw new E('There are pending cash-outs. Mark them as released or cancel them before closing.');
   await q('update store_sessions set closed_at=now(), closed_by=$1, end_amount=$2, pos_end=$3 where id=$4', [a.email, totals.balance, totals.posBalance, s.id]);
-  return { endAmount: totals.balance, posEnd: totals.posBalance, posTotal: totals.posTotal };
+  const un = (await q("select count(*)::int n from orders where method='Pickup' and status in ('Complete','Incomplete') and picked_up_at is null")).rows[0].n;
+  return { endAmount: totals.balance, posEnd: totals.posBalance, posTotal: totals.posTotal, unclaimed: un };
 }
 async function adminCashAdd(token, kind, method, amount, ref) {
   const a = await auth(token, STORE_ROLES);
@@ -550,7 +601,7 @@ const fns = { getInfo, getProducts, getRiders, placeOrder, trackOrder, trackMany
   adminGetOrders, adminPoll, adminReviewOrder, adminAssignRider, adminGetProducts, adminSaveProduct, adminDeleteProduct,
   adminListStaff, adminSaveStaff, adminDeleteStaff, riderOrders, riderPoll, riderRespond,
   adminTestEmail, adminReport, adminStorage, adminPurgeOld,
-  orderRespond, adminResolveOrder, adminStoreState, adminCashList, adminStoreOpen, adminStoreClose, adminCashAdd, adminCashRelease, adminCashCancel, posSale };
+  orderRespond, orderCancel, adminMarkPickedUp, adminCancelUnclaimed, adminResolveOrder, adminStoreState, adminCashList, adminStoreOpen, adminStoreClose, adminCashAdd, adminCashRelease, adminCashCancel, posSale };
 
 module.exports = async (req, res) => {
   try {
