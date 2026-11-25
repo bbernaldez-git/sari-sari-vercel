@@ -1218,11 +1218,4 @@ else { applySide(); loadShop(); updateCart(); custPoll(); }
 </script>
 </body>
 </html>
-```[cite: 2]
 
-### What Was Added
-* **Category selector (`#invCatSel`):** Populated from the active **Retail** or **Wholesale** tab with item counts per category, and automatically resets to **All categories** when switching tabs[cite: 2].
-* **Low stock toggle (`#invLowBtn`):** Filters to items with `1` to `5` pieces (`p.stock > 0 && p.stock <= 5`), showing the live count for the current tab and selected category[cite: 2].
-* **Reset behavior (`resetInv` & empty state):** Clears search text, category selection, and the Low stock filter together[cite: 2].
-
-Save this as your updated `public/index.html` (and update `public/index_backup.html` if you keep it in sync), then deploy to Vercel[cite: 1, 2].
